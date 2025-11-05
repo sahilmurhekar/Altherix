@@ -36,7 +36,7 @@ const Navbar = () => {
               </ul>
             </div>
             <a href="/" className="flex flex-row gap-2 font-black items-center">
-              <img className='h-6 rounded-xl' src={Logo} alt="logo" /> AYUVERSE
+              <img className='h-6 rounded-md' src={Logo} alt="logo" /> ALTHERIX
             </a>
           </div>
           <div className="navbar-center hidden lg:flex">
