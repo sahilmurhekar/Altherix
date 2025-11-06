@@ -1,11 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Navbar from '../components/Navbar'
 import HeroImage from '../assets/hero.png'
 import ColorBends from '../components/ColorBends'
 import Magnet from '../components/Magnet'
-import { CheckCircle, Shield, Database, Brain, Clock, Lock, Stethoscope, TrendingUp, FileText, Pill } from 'lucide-react'
+import { CheckCircle, Shield, Database, Brain, Clock, Lock, Stethoscope, TrendingUp, FileText, Pill, ChevronDown, Twitter, Linkedin, Facebook, Instagram, Mail, Phone, MapPin, ArrowRight, Zap, Eye, AlertCircle } from 'lucide-react'
 
 const Landing = () => {
+  const [expandedFaq, setExpandedFaq] = useState(0)
+  const [comparisonView, setComparisonView] = useState('all')
+
   return (
     <div className="w-full bg-transparent">
       <ColorBends
@@ -39,10 +42,10 @@ const Landing = () => {
         {/* Problems Section */}
         <section className="py-20 lg:py-28">
           <div className="mb-16 text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black mb-4">
+            <h2 className="text-3xl md:text-4xl font-black mb-8">
               Healthcare Should Work <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">For You</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+            <p className="text-sm md:text-lg text-zinc-400 max-w-2xl mx-auto">
               Today's healthcare is fragmented and confusing. We're here to change that.
             </p>
           </div>
@@ -82,10 +85,10 @@ const Landing = () => {
         {/* Solutions Section */}
         <section className="py-20 lg:py-28">
           <div className="mb-16 text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black mb-4">
+            <h2 className="text-3xl md:text-4xl font-black mb-8">
               Reimagining Healthcare <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Secure, Smart, Seamless</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+            <p className="text-sm md:text-lg  text-zinc-400 max-w-2xl mx-auto">
               We blend cutting-edge technology with patient-centric design to create an intuitive, efficient healthcare experience.
             </p>
           </div>
@@ -136,10 +139,10 @@ const Landing = () => {
             {/* For Patients */}
             <div>
               <div className="mb-10">
-                <h3 className="text-3xl md:text-4xl font-black mb-3 text-center md:text-left">
+                <h3 className="text-3xl md:text-4xl font-black mb-6 text-center lg:text-left">
                   For <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Patients</span>
                 </h3>
-                <p className="text-center md:text-left text-zinc-400">Empower yourself with tools to understand, manage, and secure your health journey.</p>
+                <p className="text-sm md:text-lg text-center lg:text-left text-zinc-400">Empower yourself with tools to understand, manage, and secure your health journey.</p>
               </div>
 
               <div className="space-y-6">
@@ -150,7 +153,7 @@ const Landing = () => {
                   { title: "Data Ownership You Deserve", desc: "Your health data is encrypted and owned exclusively by you.", icon: Lock },
                   { title: "Smart Medication Management", desc: "Automatic reminders, drug compatibility checks, and seamless refills.", icon: Pill }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex gap-4">
+                  <div key={idx} className="flex gap-4 md:pl-32 lg:pl-0">
                     <div className="w-10 h-10 rounded-full bg-blue-500/5 border border-blue-500/50 flex items-center justify-center flex-shrink-0">
                       <item.icon className="w-5 h-5 text-blue-400" />
                     </div>
@@ -161,19 +164,20 @@ const Landing = () => {
                   </div>
                 ))}
               </div>
-
+                <div className='flex justify-center lg:justify-start'>
               <button className="border-none mt-10 btn bg-blue-500 hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition-all duration-300 w-full md:w-auto">
                 Start Managing Your Health
               </button>
+            </div>
             </div>
 
             {/* For Doctors */}
             <div>
               <div className="mb-10">
-                <h3 className="text-3xl text-center md:text-left md:text-4xl font-black mb-3">
+                <h3 className="text-3xl text-center lg:text-left md:text-4xl font-black mb-6">
                   <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">For</span> Doctors.
                 </h3>
-                <p className="text-center md:text-left text-zinc-400">Deliver exceptional care with a secure, efficient ecosystem for your practice.</p>
+                <p className="text-sm md:text-lg text-center lg:text-left text-zinc-400">Deliver exceptional care with a secure, efficient ecosystem for your practice.</p>
               </div>
 
               <div className="space-y-6">
@@ -184,7 +188,7 @@ const Landing = () => {
                   { title: "Effortless Compliance", desc: "Blockchain-backed audit trails ensure HIPAA and GDPR compliance.", icon: Shield },
                   { title: "Focus on Healing", desc: "Automation handles scheduling and records while you focus on patients.", icon: CheckCircle }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex gap-4">
+                  <div key={idx} className="flex gap-4 md:pl-32 lg:pl-0">
                     <div className="w-10 h-10 rounded-full bg-purple-500/5 border border-purple-500/50 flex items-center justify-center flex-shrink-0">
                       <item.icon className="w-5 h-5 text-purple-400" />
                     </div>
@@ -195,13 +199,277 @@ const Landing = () => {
                   </div>
                 ))}
               </div>
-
+                <div className='flex justify-center lg:justify-start'>
               <button className="border-none mt-10 btn bg-purple-600 hover:shadow-lg hover:shadow-purple-600/50 hover:scale-105 transition-all duration-300 w-full md:w-auto">
                 Join as a Healthcare Provider
               </button>
+              </div>
             </div>
           </div>
         </section>
+
+        {/* TRUST & CREDIBILITY SECTION */}
+        <section className="py-20 lg:py-28">
+          <div className="bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5 rounded-3xl blur-3xl z-10"></div>
+
+          <div className="mb-16 flex flex-col items-center justify-center">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-2 mb-8 lg:mb-12">
+              <Shield className="w-4 h-4 text-blue-400" />
+              <span className="text-xs font-semibold text-blue-300">SECURITY FIRST</span>
+            </div>
+            <h2 className="text-center lg:text-left text-3xl md:text-4xl font-black mb-8">
+              Trusted, Compliant, and <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Proven Secure</span>
+            </h2>
+            <p className="text-sm md:text-lg text-center text-zinc-400 max-w-3xl">
+              Our infrastructure is designed for uncompromising security and transparency. Every byte of your data is encrypted, verified, and protected under global healthcare data standards.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {[
+              { title: "Privacy Assurance through Encryption", icon: Eye, colorBg: "bg-yellow-500/10", colorBorder: "border-yellow-500/50", colorIcon: "text-yellow-400", colorHover: "hover:border-yellow-500/50" },
+              { title: "CORS Secured: Zero Data Breaches", icon: Lock, colorBg: "bg-purple-500/10", colorBorder: "border-purple-500/50", colorIcon: "text-purple-400", colorHover: "hover:border-purple-500/50" },
+              { title: "Blockchain-Verified Medical History", icon: Zap, colorBg: "bg-blue-500/10", colorBorder: "border-blue-500/50", colorIcon: "text-blue-400", colorHover: "hover:border-blue-500/50" },
+              {title: "24/7 Customer Support Available", icon: Phone, colorBg: "bg-red-500/10", colorBorder: "border-red-500/50", colorIcon: "text-red-400", colorHover: "hover:border-red-500/50"}
+            ].map((stat, idx) => (
+              <div key={idx} className={`bg-zinc-900/30 group overflow-hidden rounded-xl border ${stat.colorBorder} ${stat.colorHover} transition-all duration-300 p-6 hover:bg-zinc-900/60`}>
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-lg ${stat.colorBg} border ${stat.colorBorder} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <stat.icon className={`w-5 h-5 ${stat.colorIcon}`} />
+                  </div>
+                  <p className="font-semibold leading-relaxed">{stat.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* HOW IT WORKS SECTION */}
+        <section className="py-20 lg:py-28">
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl md:text-4xl font-black mb-12 lg:mb-32">
+              Your Path to Smarter Healthcare <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">in Three Simple Steps</span>
+            </h2>
+          </div>
+
+          <div className="relative">
+            {/* Connecting lines for desktop */}
+            <div className="hidden lg:block absolute top-20 left-1/4 right-1/4 h-1 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
+
+            <div className="grid md:grid-cols-3 gap-8 md:gap-6">
+              {[
+                {
+                  step: 1,
+                  title: "Create Your Secure Profile",
+                  desc: "Sign up with Google or your mobile number. Verification takes less than a minute.",
+                  icon: "🔐"
+                },
+                {
+                  step: 2,
+                  title: "Connect & Upload",
+                  desc: "Patients can find doctors and upload reports, while doctors can start managing patient data immediately.",
+                  icon: "🔗"
+                },
+                {
+                  step: 3,
+                  title: "Experience Seamless Healthcare",
+                  desc: "Access insights, manage prescriptions, and enjoy full blockchain protection — all in one unified dashboard.",
+                  icon: "✨"
+                }
+              ].map((item, idx) => (
+                <div key={idx} className="relative">
+                  <div className="text-center">
+                    <div className="relative mb-6 inline-block">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center mx-auto">
+                        <span className="text-4xl">{item.icon}</span>
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 flex items-center justify-center font-bold text-sm text-white">
+                        {item.step}
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                    <p className="text-sm md:text-md text-zinc-400 leading-relaxed">{item.desc}</p>
+                  </div>
+                  {idx < 2 && <div className="hidden md:block absolute top-8 -right-4 text-2xl text-blue-500/50">→</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* TECHNOLOGY SECTION */}
+        <section className="py-20 lg:py-28">
+          <div className="mb-16 flex flex-col items-center justify-center">
+            <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-2 mb-8">
+              <Zap className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-semibold text-purple-300">CUTTING-EDGE TECH</span>
+            </div>
+            <h2 className="text-center lg:text-left text-3xl md:text-4xl font-black mb-4">
+              Technology that <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Builds Trust</span>
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {[
+              {
+                title: "Blockchain Security",
+                desc: "SHA-256 encryption and distributed storage ensure records can't be altered or deleted.",
+                icon: "⛓️",
+                gradient: "from-blue-600/20 to-blue-400/5"
+              },
+              {
+                title: "AI-Powered Intelligence",
+                desc: "Advanced AI models analyze reports, predict potential risks, and provide patient-friendly summaries.",
+                icon: "🧠",
+                gradient: "from-purple-600/20 to-purple-400/5"
+              },
+              {
+                title: "Real-Time Communication",
+                desc: "Receive live updates about appointments, prescriptions, and diagnostic results instantly.",
+                icon: "📡",
+                gradient: "from-pink-600/20 to-pink-400/5"
+              },
+              {
+                title: "Secure Cloud Architecture",
+                desc: "High-availability storage with 99.9% uptime and encrypted data backups across regions.",
+                icon: "☁️",
+                gradient: "from-green-600/20 to-green-400/5"
+              }
+            ].map((tech, idx) => (
+              <div key={idx} className={`group relative bg-gradient-to-br ${tech.gradient} border border-zinc-700 hover:border-zinc-600 rounded-xl p-8 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 overflow-hidden`}>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-x-full group-hover:translate-x-0"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-center md:justify-start text-5xl mb-4 transition-transform duration-300">{tech.icon}</div>
+                  <h3 className="text-center md:text-left text-xl font-bold mb-3">{tech.title}</h3>
+                  <p className="text-center md:text-left text-zinc-400 leading-relaxed">{tech.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* COMPARISON TABLE SECTION */}
+        <section className="py-20 lg:py-28">
+          <div className="mb-16 flex flex-col items-center justify-center text-center">
+            <h2 className="text-3xl lg:w-240 md:text-4xl font-black mb-8">
+              Why Modern Healthcare Belongs on <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Blockchain</span>
+            </h2>
+            <p className="text-sm md:text-lg  text-zinc-400 max-w-2xl mx-auto">
+              See how we're revolutionizing healthcare delivery with next-generation technology.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs md:text-sm">
+              <thead>
+                <tr className="border-b border-zinc-700">
+                  <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-white">Feature</th>
+                  <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-zinc-400">Traditional</th>
+                  <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-blue-400">Our Platform</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feature: "Medical Records", traditional: "❌ Scattered", ours: "✅ Unified Timeline" },
+                  { feature: "Data Security", traditional: "⚠️ Vulnerable", ours: "✅ Immutable" },
+                  { feature: "AI Insights", traditional: "❌ None", ours: "✅ Personalized" },
+                  { feature: "Prescriptions", traditional: "⚠️ Paper-Based", ours: "✅ Digital & Smart" },
+                  { feature: "Doctor Verification", traditional: "⚠️ Unclear", ours: "✅ Verified" },
+                  { feature: "Data Ownership", traditional: "⚠️ Provider", ours: "✅ Patient-Owned" },
+                  { feature: "Accessibility", traditional: "❌ Limited", ours: "✅ 24/7 Global" }
+                ].map((row, idx) => (
+                  <tr key={idx} className={`border-b border-zinc-800 hover:bg-zinc-900/40 transition-colors duration-200 ${idx % 2 === 0 ? 'bg-zinc-900/20' : 'bg-zinc-900/10'}`}>
+                    <td className="py-3 px-2 md:py-4 md:px-4 font-semibold text-white">{row.feature}</td>
+                    <td className="py-3 px-2 md:py-4 md:px-4 text-zinc-400">{row.traditional}</td>
+                    <td className="py-3 px-2 md:py-4 md:px-4 text-green-400">{row.ours}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* FAQ SECTION */}
+        <section className="py-20 lg:py-28">
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl md:text-4xl font-black mb-8">
+              Frequently Asked <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Questions</span>
+            </h2>
+            <p className="text-sm md:text-lg  text-zinc-400">Everything you need to know about our platform.</p>
+          </div>
+
+          <div className="max-w-3xl mx-auto space-y-4">
+            {[
+              {
+                question: "How secure is my medical data?",
+                answer: "We use AES-256 encryption, blockchain hashing, and global healthcare compliance (HIPAA/GDPR) to ensure your data is unalterable and accessible only by you. All data is encrypted end-to-end with military-grade security protocols."
+              },
+              {
+                question: "Can I delete or share my records?",
+                answer: "Yes. You have full authority to download, archive, or share your records securely. Blockchain ensures transparency and authenticity, and you control exactly who has access and for how long."
+              },
+              {
+                question: "Is this platform HIPAA compliant?",
+                answer: "Absolutely. Every process and transaction is built to meet HIPAA and GDPR requirements. We undergo regular audits and compliance checks to ensure we meet all healthcare data protection standards."
+              },
+              {
+                question: "Can I share my reports with another doctor?",
+                answer: "Yes. Generate a secure, time-limited access link to share your complete medical history safely. The link automatically expires, and you can revoke access anytime."
+              },
+              {
+                question: "How does the AI work?",
+                answer: "Our AI analyzes uploaded reports using an advanced medical knowledge base to explain results in plain language and highlight key health indicators. It learns from medical literature to provide accurate, contextual insights."
+              },
+              {
+                question: "Do you support telemedicine?",
+                answer: "Yes. You can choose between in-person and virtual consultations with equal security and ease. Our video consultation platform is HIPAA-compliant with screen recording capabilities for records."
+              }
+            ].map((faq, idx) => (
+              <div key={idx} className="group border border-zinc-700 rounded-lg overflow-hidden hover:border-blue-500/50 transition-all duration-300">
+                <button
+                  onClick={() => setExpandedFaq(expandedFaq === idx ? -1 : idx)}
+                  className="w-full text-left p-6 flex items-center justify-between hover:bg-zinc-900/30 transition-colors duration-200"
+                >
+                  <span className="font-semibold text-sm md:text-lg  pr-4">{faq.question}</span>
+                  <ChevronDown className={`w-5 h-5 text-blue-400 flex-shrink-0 transition-transform duration-300 ${expandedFaq === idx ? 'rotate-180' : ''}`} />
+                </button>
+                {expandedFaq === idx && (
+                  <div className="text-sm md:text-md px-6 py-6 border-t border-zinc-700 text-zinc-400 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {faq.answer}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FOOTER CTA SECTION */}
+        <section className="px-4 lg:px-0 py-20 lg:py-28 relative overflow-hidden rounded-2xl">
+          <div className="absolute inset-0 z-10">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 blur-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/50 to-slate-950"></div>
+          </div>
+
+          <div className="text-center flex flex-col items-center justify-center relative z-10">
+            <h2 className="text-3xl md:text-4xl lg:w-180 font-black mb-6">
+              Your Secure, Intelligent Healthcare Journey <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Starts Here</span>
+            </h2>
+            <p className="text-sm md:text-lg  text-zinc-400 max-w-2xl mx-auto mb-10">
+              Join thousands of patients and doctors embracing the future of healthcare — secure, intelligent, and connected.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="/register" className="group border-none btn bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2">
+                Sign Up as Patient
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </a>
+              <a href="/doctor-register" className="group border-none btn bg-gradient-to-r from-purple-600 to-purple-700 hover:shadow-lg hover:shadow-purple-600/50 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2">
+                Join as Doctor
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </a>
+            </div>
+          </div>
+        </section>
+
       </div>
     </div>
   )

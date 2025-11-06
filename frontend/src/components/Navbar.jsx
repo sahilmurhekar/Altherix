@@ -15,7 +15,7 @@ const Navbar = () => {
               </div>
               <ul
                 tabIndex="-1"
-                className="menu menu-sm dropdown-content rounded-box z-1 mt-3 w-60 p-2 shadow-lg backdrop-blur-md bg-base-200/40 rounded-lg"
+                className="menu menu-sm dropdown-content backdrop-blur-xl rounded-box z-1 mt-3 w-60 p-2 shadow-lg bg-base-200/95 rounded-lg"
               >
                 <li><a>Home</a></li>
                 <li>
@@ -45,7 +45,7 @@ const Navbar = () => {
               <li>
                 <details>
                   <summary>About Us</summary>
-                  <ul className="bg-base-200/40 p-2 w-60 backdrop-blur-md rounded-lg shadow-lg">
+                  <ul className="bg-base-200/40 p-2 w-60 backdrop-blur-2xl rounded-lg shadow-lg">
                     <li><a>Problem we solve</a></li>
                     <li><a>For Doctors</a></li>
                     <li><a>For Patients</a></li>
