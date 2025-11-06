@@ -3,11 +3,68 @@ import Navbar from '../components/Navbar'
 import HeroImage from '../assets/hero.png'
 import ColorBends from '../components/ColorBends'
 import Magnet from '../components/Magnet'
-import { CheckCircle, Shield, Database, Brain, Clock, Lock, Stethoscope, TrendingUp, FileText, Pill, ChevronDown, Twitter, Linkedin, Facebook, Instagram, Mail, Phone, MapPin, ArrowRight, Zap, Eye, AlertCircle } from 'lucide-react'
+import Footer from '../components/Footer'
+import { CheckCircle, Shield, Database, Brain, Clock, Lock, Stethoscope, TrendingUp, FileText, Pill, ChevronDown, Twitter, Linkedin, Facebook, Instagram, Mail, Phone, MapPin, ArrowRight, Zap, Eye, AlertCircle, Send, Loader } from 'lucide-react'
 
 const Landing = () => {
   const [expandedFaq, setExpandedFaq] = useState(0)
   const [comparisonView, setComparisonView] = useState('all')
+
+  // Contact Form State
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+    userType: 'patient'
+  })
+  const [contactLoading, setContactLoading] = useState(false)
+  const [contactStatus, setContactStatus] = useState(null)
+
+  const handleContactChange = (e) => {
+    const { name, value } = e.target
+    setContactForm(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault()
+    setContactLoading(true)
+    setContactStatus(null)
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactForm)
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setContactStatus({ type: 'success', message: 'Thank you! We\'ll get back to you soon.' })
+        setContactForm({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: '',
+          userType: 'patient'
+        })
+      } else {
+        setContactStatus({ type: 'error', message: data.message || 'Something went wrong. Please try again.' })
+      }
+    } catch (error) {
+      setContactStatus({ type: 'error', message: 'Network error. Please check your connection.' })
+    } finally {
+      setContactLoading(false)
+    }
+  }
 
   return (
     <div className="w-full bg-transparent">
@@ -25,7 +82,7 @@ const Landing = () => {
         <Navbar />
 
         {/* Hero Section */}
-        <div className="w-full mt-20 min-h-[90vh] lg:min-h-[600px] flex flex-col pt-18 lg:pt-0 lg:flex-row justify-center lg:justify-between items-center gap-6">
+        <div id='hero' className="w-full mt-20 min-h-[90vh] lg:min-h-[600px] flex flex-col pt-18 lg:pt-0 lg:flex-row justify-center lg:justify-between items-center gap-6">
           <div className='lg:w-1/2 flex flex-col justify-center items-center lg:items-start gap-8'>
             <h1 className='text-2xl text-center lg:text-left font-black md:text-4xl lg:text-5xl inline-block bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent'>Where AI Meets Blockchain to Redefine Your Health.</h1>
             <h3 className='text-sm md:text-md md:w-1/2 lg:w-full lg:text-lg text-center lg:text-left text-zinc-400 hover:text-zinc-200 transition-all duration-300'>Experience the future of healthcare where your medical records, appointments, and AI-powered health insights are unified under one secure, blockchain-protected platform.</h3>
@@ -40,7 +97,7 @@ const Landing = () => {
         </div>
 
         {/* Problems Section */}
-        <section className="py-20 lg:py-28">
+        <section id='problems' className="py-20 lg:py-28">
           <div className="mb-16 text-center">
             <h2 className="text-3xl md:text-4xl font-black mb-8">
               Healthcare Should Work <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">For You</span>
@@ -83,10 +140,10 @@ const Landing = () => {
         </section>
 
         {/* Solutions Section */}
-        <section className="py-20 lg:py-28">
+        <section id='solutions' className="py-20 lg:py-28">
           <div className="mb-16 text-center">
             <h2 className="text-3xl md:text-4xl font-black mb-8">
-              Reimagining Healthcare <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Secure, Smart, Seamless</span>
+              What <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">we do?</span>
             </h2>
             <p className="text-sm md:text-lg  text-zinc-400 max-w-2xl mx-auto">
               We blend cutting-edge technology with patient-centric design to create an intuitive, efficient healthcare experience.
@@ -134,10 +191,10 @@ const Landing = () => {
         </section>
 
         {/* For Patients & Doctors Section */}
-        <section className="py-20 lg:py-28">
+        <section id='pandd' className="py-20 lg:py-28">
           <div className="grid lg:grid-cols-2 gap-12">
             {/* For Patients */}
-            <div>
+            <div id='patients'>
               <div className="mb-10">
                 <h3 className="text-3xl md:text-4xl font-black mb-6 text-center lg:text-left">
                   For <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Patients</span>
@@ -172,7 +229,7 @@ const Landing = () => {
             </div>
 
             {/* For Doctors */}
-            <div>
+            <div id='doctors'>
               <div className="mb-10">
                 <h3 className="text-3xl text-center lg:text-left md:text-4xl font-black mb-6">
                   <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">For</span> Doctors.
@@ -209,7 +266,7 @@ const Landing = () => {
         </section>
 
         {/* TRUST & CREDIBILITY SECTION */}
-        <section className="py-20 lg:py-28">
+        <section id='trust' className="py-20 lg:py-28">
           <div className="bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5 rounded-3xl blur-3xl z-10"></div>
 
           <div className="mb-16 flex flex-col items-center justify-center">
@@ -245,10 +302,10 @@ const Landing = () => {
         </section>
 
         {/* HOW IT WORKS SECTION */}
-        <section className="py-20 lg:py-28">
+        <section id='how' className="py-20 lg:py-28">
           <div className="mb-16 text-center">
             <h2 className="text-3xl md:text-4xl font-black mb-12 lg:mb-32">
-              Your Path to Smarter Healthcare <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">in Three Simple Steps</span>
+              How it <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Works?</span>
             </h2>
           </div>
 
@@ -298,7 +355,7 @@ const Landing = () => {
         </section>
 
         {/* TECHNOLOGY SECTION */}
-        <section className="py-20 lg:py-28">
+        <section id='tech' className="py-20 lg:py-28">
           <div className="mb-16 flex flex-col items-center justify-center">
             <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-2 mb-8">
               <Zap className="w-4 h-4 text-purple-400" />
@@ -349,10 +406,10 @@ const Landing = () => {
         </section>
 
         {/* COMPARISON TABLE SECTION */}
-        <section className="py-20 lg:py-28">
+        <section id='compare' className="py-20 lg:py-28">
           <div className="mb-16 flex flex-col items-center justify-center text-center">
             <h2 className="text-3xl lg:w-240 md:text-4xl font-black mb-8">
-              Why Modern Healthcare Belongs on <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Blockchain</span>
+              Why Modern Healthcare on <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Blockchain</span>
             </h2>
             <p className="text-sm md:text-lg  text-zinc-400 max-w-2xl mx-auto">
               See how we're revolutionizing healthcare delivery with next-generation technology.
@@ -390,7 +447,7 @@ const Landing = () => {
         </section>
 
         {/* FAQ SECTION */}
-        <section className="py-20 lg:py-28">
+        <section id='faqs' className="py-20 lg:py-28">
           <div className="mb-16 text-center">
             <h2 className="text-3xl md:text-4xl font-black mb-8">
               Frequently Asked <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Questions</span>
@@ -443,8 +500,174 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* CONTACT FORM SECTION */}
+        <section id='contact' className="py-20 lg:py-28">
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl md:text-4xl font-black mb-8">
+              Get in <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Touch</span>
+            </h2>
+            <p className="text-sm md:text-lg text-zinc-400 max-w-2xl mx-auto">
+              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8 mb-12">
+            {/* Contact Info Cards */}
+            <div className="bg-zinc-900/30 border border-blue-500/30 rounded-lg p-8 hover:border-blue-500/60 transition-all duration-300 hover:bg-zinc-900/50">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-lg bg-blue-500/10 border border-blue-500/50 flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-blue-400" />
+                </div>
+                <h3 className="font-bold text-lg">Email</h3>
+              </div>
+              <p className="text-zinc-400 text-sm mb-2">support@healthchain.io</p>
+              <p className="text-zinc-500 text-xs">We reply within 24 hours</p>
+            </div>
+
+            <div className="bg-zinc-900/30 border border-purple-500/30 rounded-lg p-8 hover:border-purple-500/60 transition-all duration-300 hover:bg-zinc-900/50">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-lg bg-purple-500/10 border border-purple-500/50 flex items-center justify-center">
+                  <Phone className="w-6 h-6 text-purple-400" />
+                </div>
+                <h3 className="font-bold text-lg">Phone</h3>
+              </div>
+              <p className="text-zinc-400 text-sm mb-2">+91 98765 43210</p>
+              <p className="text-zinc-500 text-xs">Monday to Friday, 9 AM - 6 PM IST</p>
+            </div>
+
+            <div className="bg-zinc-900/30 border border-pink-500/30 rounded-lg p-8 hover:border-pink-500/60 transition-all duration-300 hover:bg-zinc-900/50">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-lg bg-pink-500/10 border border-pink-500/50 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-pink-400" />
+                </div>
+                <h3 className="font-bold text-lg">Location</h3>
+              </div>
+              <p className="text-zinc-400 text-sm mb-2">Chennai, Tamil Nadu, India</p>
+              <p className="text-zinc-500 text-xs">Headquarters</p>
+            </div>
+          </div>
+
+          {/* Contact Form */}
+          <div className="max-w-2xl mx-auto bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-500/20 rounded-2xl p-8 md:p-12">
+            <form onSubmit={handleContactSubmit} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <input
+                    type="text"
+                    name="name"
+                    value={contactForm.name}
+                    onChange={handleContactChange}
+                    placeholder="Full name"
+                    required
+                    className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/80 transition-all duration-300"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={contactForm.email}
+                    onChange={handleContactChange}
+                    placeholder="Your Email"
+                    required
+                    className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/80 transition-all duration-300"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={contactForm.phone}
+                    onChange={handleContactChange}
+                    placeholder="Your Phone"
+                    required
+                    className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/80 transition-all duration-300"
+                  />
+                </div>
+                <div>
+                  <select
+                    name="userType"
+                    value={contactForm.userType}
+                    onChange={handleContactChange}
+                    className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/80 transition-all duration-300"
+                  >
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="hospital">Hospital</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  name="subject"
+                  value={contactForm.subject}
+                  onChange={handleContactChange}
+                  placeholder="Subject"
+                  required
+                  className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/80 transition-all duration-300"
+                />
+              </div>
+
+              <div>
+                <textarea
+                  name="message"
+                  value={contactForm.message}
+                  onChange={handleContactChange}
+                  placeholder="Your Message"
+                  rows="5"
+                  required
+                  className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/80 transition-all duration-300 resize-none"
+                />
+              </div>
+
+              {/* Status Messages */}
+              {contactStatus && (
+                <div className={`p-4 rounded-lg flex items-center gap-3 ${
+                  contactStatus.type === 'success'
+                    ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                    : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                }`}>
+                  {contactStatus.type === 'success' ? (
+                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  )}
+                  <span className="text-sm">{contactStatus.message}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={contactLoading}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/50 flex items-center justify-center gap-2"
+              >
+                {contactLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Message
+                  </>
+                )}
+              </button>
+
+              <p className="text-xs text-zinc-500 text-center">
+                We respect your privacy. Your information will only be used to respond to your inquiry.
+              </p>
+            </form>
+          </div>
+        </section>
+
         {/* FOOTER CTA SECTION */}
-        <section className="px-4 lg:px-0 py-20 lg:py-28 relative overflow-hidden rounded-2xl">
+        <section className="mb-20 px-4 lg:px-0 py-20 lg:py-28 relative overflow-hidden rounded-2xl">
           <div className="absolute inset-0 z-10">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 blur-3xl"></div>
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/50 to-slate-950"></div>
@@ -469,8 +692,9 @@ const Landing = () => {
             </div>
           </div>
         </section>
-
       </div>
+      {/*Footer */}
+      <Footer/>
     </div>
   )
 }

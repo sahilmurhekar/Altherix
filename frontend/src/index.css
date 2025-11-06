@@ -1,7 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+/* Import Tailwind base first */
 @import "tailwindcss";
+
+/* DaisyUI plugin */
 @plugin "daisyui";
 
+/* DaisyUI custom theme */
 @plugin "daisyui/theme" {
   name: "black";
   default: false;
@@ -37,8 +42,34 @@
   --noise: 0;
 }
 
-.bg-clip-text {
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+/* Add custom utilities AFTER Tailwind layers */
+@layer utilities {
+  .bg-clip-text {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #9333ea;
+    border-radius: 10px;
+  }
+
+  /* Firefox support */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #9333ea transparent;
+  }
 }

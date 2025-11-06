@@ -5,7 +5,7 @@ const Navbar = () => {
   return (
     <div className='w-full fixed top-0 left-0 z-50 flex justify-center animate-float'>
       <div className='max-w-7xl w-full px-4 sm:px-6 lg:px-8'>
-        <div className="navbar rounded-2xl mt-4 bg-base-200/40 backdrop-blur-md shadow-xl px-4">
+        <div className="navbar rounded-2xl mt-4 bg-base-200/40 border border-base-300 backdrop-blur-md shadow-xl px-4">
           <div className="navbar-start">
             <div className="dropdown">
               <div tabIndex={0} role="button" className="btn btn-ghost mr-2 lg:hidden">
@@ -17,22 +17,24 @@ const Navbar = () => {
                 tabIndex="-1"
                 className="menu menu-sm dropdown-content backdrop-blur-xl rounded-box z-1 mt-3 w-60 p-2 shadow-lg bg-base-200/95 rounded-lg"
               >
-                <li><a>Home</a></li>
+                <li><a href='#hero'>Home</a></li>
                 <li>
                   <details>
                     <summary>About Us</summary>
                     <ul className="p-2">
-                      <li><a>Problem we solve</a></li>
-                      <li><a>For Doctors</a></li>
-                      <li><a>For Patients</a></li>
-                      <li><a>How it works?</a></li>
+                        <li><a href='#problems'>Problem we solve</a></li>
+                        <li><a href='#solutions'>What We Do?</a></li>
+                        <li><a href='#doctors'>For Doctors</a></li>
+                        <li><a href='#patients'>For Patients</a></li>
+                        <li><a href='#how'>How it works?</a></li>
                     </ul>
                   </details>
                 </li>
-                <li><a>FAQs</a></li>
-                <li><a>Contact Us</a></li>
-                <li><a>Login</a></li>
-                <li><a>Register</a></li>
+                <li><a href='#compare'>Why Us?</a></li>
+                <li><a href='#faqs'>FAQs</a></li>
+                <li><a href='#contact'>Contact Us</a></li>
+                <li><a href='/login'>Login</a></li>
+                <li><a href='/register'>Register</a></li>
               </ul>
             </div>
             <a href="/" className="flex flex-row gap-2 font-black items-center">
@@ -41,20 +43,22 @@ const Navbar = () => {
           </div>
           <div className="navbar-center hidden lg:flex">
             <ul className="menu menu-horizontal px-1 gap-4">
-              <li><a>Home</a></li>
+              <li><a href='#hero'>Home</a></li>
               <li>
                 <details>
                   <summary>About Us</summary>
-                  <ul className="bg-base-200/40 p-2 w-60 backdrop-blur-2xl rounded-lg shadow-lg">
-                    <li><a>Problem we solve</a></li>
-                    <li><a>For Doctors</a></li>
-                    <li><a>For Patients</a></li>
-                    <li><a>How it works?</a></li>
+                  <ul className="bg-base-200/95 p-2 w-60 backdrop-blur-2xl rounded-lg shadow-lg">
+                    <li><a href='#problems'>Problem we solve</a></li>
+                    <li><a href='#solutions'>What We Do?</a></li>
+                    <li><a href='#doctors'>For Doctors</a></li>
+                    <li><a href='#patients'>For Patients</a></li>
+                    <li><a href='#how'>How it works?</a></li>
                   </ul>
                 </details>
               </li>
-              <li><a>FAQs</a></li>
-              <li><a>Contact Us</a></li>
+              <li><a href='#compare'>Why Us?</a></li>
+              <li><a href='#faqs'>FAQs</a></li>
+              <li><a href='#contact'>Contact Us</a></li>
             </ul>
           </div>
           <div className="navbar-end gap-2 hidden sm:flex">
