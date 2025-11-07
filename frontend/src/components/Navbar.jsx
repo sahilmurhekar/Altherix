@@ -34,7 +34,6 @@ const Navbar = () => {
                 <li><a href='#faqs'>FAQs</a></li>
                 <li><a href='#contact'>Contact Us</a></li>
                 <li><a href='/login'>Login</a></li>
-                <li><a href='/register'>Register</a></li>
               </ul>
             </div>
             <a href="/" className="flex flex-row gap-2 font-black items-center">
@@ -62,8 +61,7 @@ const Navbar = () => {
             </ul>
           </div>
           <div className="navbar-end gap-2 hidden sm:flex">
-            <a href="/login" className="btn btn-ghost">Login</a>
-            <a href="/register" className="btn border-none bg-gradient-to-r from-purple-800 to-blue-500 text-white hover:shadow-lg hover:from-purple-700 hover:to-blue-600 hover:scale-105 transition-all duration-500 ease-in-out">Register</a>
+            <a href="/login" className="btn border-none bg-gradient-to-r from-purple-800 to-blue-500 text-white hover:shadow-lg hover:from-purple-700 hover:to-blue-600 hover:scale-105 transition-all duration-500 ease-in-out">Log in</a>
           </div>
         </div>
       </div>
