@@ -13,19 +13,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Atlas Connection
-const ATLAS_URI = process.env.MONGO_ATLAS_URI;
-const DB_NAME = process.env.DB_NAME;
-
-const mongoURI = `${ATLAS_URI}/${DB_NAME}?retryWrites=true&w=majority`;
-
-mongoose.connect(mongoURI).then(() => {
-  console.log(`MongoDB Atlas connected to ${DB_NAME}`);
-}).catch(err => console.log(err));
+// MongoDB connection using Mongoose
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_ATLAS_URI, {
+      dbName: 'ALTHERIX_DB',
+    });
+    console.log('📦 Connected to MongoDB via Mongoose');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+  }
+};
 
 // Routes
 app.use('/api/auth', authRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+});
