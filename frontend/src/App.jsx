@@ -43,11 +43,11 @@ function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
 
-          {/* Patient Dashboard Routes */}
+          {/* Patient Dashboard Routes - Only for patients */}
           <Route
             path="/dashboard-patient"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="patient">
                 <DashboardPatient />
               </ProtectedRoute>
             }
@@ -61,11 +61,11 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
-          {/* Doctor Dashboard Routes */}
+          {/* Doctor Dashboard Routes - Only for doctors */}
           <Route
             path="/dashboard-doctor"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="doctor">
                 <DashboardDoctor />
               </ProtectedRoute>
             }

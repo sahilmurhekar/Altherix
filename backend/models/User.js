@@ -41,11 +41,23 @@ const userSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      sparse: true // Allow empty/missing coordinates
+      sparse: true
     },
     address: String
   },
   consultationFee: Number,
+
+  // Doctor ratings
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  reviews: {
+    type: Number,
+    default: 0
+  },
 
   createdAt: { type: Date, default: Date.now }
 });

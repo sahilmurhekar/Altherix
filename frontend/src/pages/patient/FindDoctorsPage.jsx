@@ -9,10 +9,11 @@ import {
   Stethoscope,
   Loader,
   AlertCircle,
-  MapPinOff,
   Phone,
   Clock
 } from 'lucide-react';
+import BookingModal from '../../components/BookingModal';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
 
 const FindDoctorsPage = () => {
   const [doctors, setDoctors] = useState([]);
@@ -20,8 +21,11 @@ const FindDoctorsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [specialization, setSpecialization] = useState('');
-  const [maxDistance, setMaxDistance] = useState(10);
+  const [maxDistance, setMaxDistance] = useState(10000);
   const [maxFee, setMaxFee] = useState(1000);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [error, setError] = useState('');
 
   const specializations = [
     'All Specializations',
@@ -35,91 +39,97 @@ const FindDoctorsPage = () => {
     'Dentistry'
   ];
 
+  // ========== FETCH NEARBY DOCTORS ==========
   useEffect(() => {
-    // Simulate fetching doctors from backend
-    setTimeout(() => {
-      const mockDoctors = [
-        {
-          id: 1,
-          name: 'Dr. Rajesh Kumar',
-          specialization: 'Cardiology',
-          experience: '12 years',
-          rating: 4.8,
-          reviews: 124,
-          fee: 500,
-          distance: 2.5,
-          clinic: 'Heart Care Clinic',
-          address: '123 MG Road, Bangalore',
-          phone: '+91 98765 43210',
-          available: true
-        },
-        {
-          id: 2,
-          name: 'Dr. Priya Singh',
-          specialization: 'General Medicine',
-          experience: '8 years',
-          rating: 4.5,
-          reviews: 98,
-          fee: 300,
-          distance: 5.2,
-          clinic: 'Health Plus Hospital',
-          address: '456 Whitefield, Bangalore',
-          phone: '+91 87654 32109',
-          available: true
-        },
-        {
-          id: 3,
-          name: 'Dr. Arjun Patel',
-          specialization: 'Orthopedics',
-          experience: '15 years',
-          rating: 4.9,
-          reviews: 156,
-          fee: 600,
-          distance: 3.8,
-          clinic: 'Bone & Joint Center',
-          address: '789 Koramangala, Bangalore',
-          phone: '+91 76543 21098',
-          available: true
-        },
-        {
-          id: 4,
-          name: 'Dr. Neha Sharma',
-          specialization: 'Dermatology',
-          experience: '10 years',
-          rating: 4.6,
-          reviews: 87,
-          fee: 400,
-          distance: 4.1,
-          clinic: 'Skin Wellness Clinic',
-          address: '321 Indiranagar, Bangalore',
-          phone: '+91 65432 10987',
-          available: true
-        },
-        {
-          id: 5,
-          name: 'Dr. Vikram Desai',
-          specialization: 'Pediatrics',
-          experience: '9 years',
-          rating: 4.7,
-          reviews: 112,
-          fee: 350,
-          distance: 6.2,
-          clinic: 'Child Care Clinic',
-          address: '654 JP Nagar, Bangalore',
-          phone: '+91 54321 09876',
-          available: false
+    const fetchNearbyDoctors = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        if (!navigator.geolocation) {
+          throw new Error('Geolocation not supported');
         }
-      ];
-      setDoctors(mockDoctors);
-      setFilteredDoctors(mockDoctors);
-      setLoading(false);
-    }, 500);
+
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+
+            try {
+              const url = `${SERVER_URL}/api/auth/nearby-doctors?latitude=${latitude}&longitude=${longitude}&maxDistance=${maxDistance * 1000}`;
+              const response = await fetch(url);
+
+              if (!response.ok) {
+                throw new Error('Failed to fetch doctors');
+              }
+
+              const data = await response.json();
+
+              // Transform backend data
+              const formattedDoctors = data.doctors.map((doc) => ({
+                id: doc._id,
+                name: doc.name,
+                specialization: doc.specialization || 'General Practice',
+                experience: doc.experience || 'N/A',
+                fee: doc.consultationFee || 500,
+                clinic: doc.clinicAddress || 'Clinic',
+                phone: doc.phone || 'N/A',
+                rating: doc.rating || 0, // Get from DB, default 0
+                reviews: doc.reviews || 0, // Get from DB, default 0
+                // Calculate distance from CLINIC location
+                distance: calculateDistance(
+                  latitude,
+                  longitude,
+                  doc.clinicLocation?.coordinates[1],
+                  doc.clinicLocation?.coordinates[0]
+                )
+              }));
+
+              setDoctors(formattedDoctors);
+              setFilteredDoctors(formattedDoctors);
+            } catch (err) {
+              console.error('Error fetching doctors:', err);
+              setError('Failed to fetch doctors');
+            } finally {
+              setLoading(false);
+            }
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            setError('Please enable location services');
+            setLoading(false);
+          }
+        );
+      } catch (err) {
+        console.error('Error:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchNearbyDoctors();
   }, []);
 
+  // ========== CALCULATE DISTANCE ==========
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    if (!lat2 || !lon2) return 'N/A';
+
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round((R * c) * 10) / 10;
+  };
+
+  // ========== FILTER DOCTORS ==========
   useEffect(() => {
     let filtered = doctors;
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
         (doc) =>
@@ -128,32 +138,79 @@ const FindDoctorsPage = () => {
       );
     }
 
-    // Filter by specialization
-    if (specialization && specialization !== 'All Specializations') {
+    if (specialization) {
       filtered = filtered.filter((doc) => doc.specialization === specialization);
     }
 
-    // Filter by distance
-    filtered = filtered.filter((doc) => doc.distance <= maxDistance);
+    filtered = filtered.filter((doc) => {
+      if (typeof doc.distance === 'number') {
+        return doc.distance <= maxDistance;
+      }
+      return true;
+    });
 
-    // Filter by fee
     filtered = filtered.filter((doc) => doc.fee <= maxFee);
 
     setFilteredDoctors(filtered);
   }, [searchTerm, specialization, maxDistance, maxFee, doctors]);
+
+  const handleBookNow = (doctor) => {
+    setSelectedDoctor(doctor);
+    setShowBookingModal(true);
+  };
+
+  const handleBookingConfirm = async (bookingData) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/book`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          doctorId: selectedDoctor.id,
+          appointmentDate: bookingData.date,
+          appointmentTime: bookingData.time,
+          reasonForVisit: bookingData.reason,
+          consultationMode: bookingData.consultationMode
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Booking failed');
+      }
+
+      alert(`✅ Appointment booked!\n\nDate: ${bookingData.date}\nTime: ${bookingData.time}`);
+      setShowBookingModal(false);
+      setSelectedDoctor(null);
+    } catch (err) {
+      console.error('Booking error:', err);
+      alert(`❌ Booking failed: ${err.message}`);
+    }
+  };
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-2xl p-6 md:p-8">
         <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
-          Find Doctors Near You
+          Find Doctors
         </h1>
-        <p className="text-zinc-400">Search and book appointments with qualified healthcare professionals</p>
+        <p className="text-zinc-400">Book appointments near you</p>
       </div>
 
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <p className="text-red-300">{error}</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
+        {/* Sidebar */}
         <div className="lg:col-span-1">
           <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 sticky top-6 space-y-6">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -161,14 +218,14 @@ const FindDoctorsPage = () => {
               Filters
             </h2>
 
-            {/* Search Input */}
+            {/* Search */}
             <div>
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">Search Doctor or Clinic</label>
-              <div className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 focus-within:border-purple-500/50 transition-colors">
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Search</label>
+              <div className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2">
                 <Search className="w-4 h-4 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Dr. Name or clinic..."
+                  placeholder="Doctor name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-transparent outline-none text-white text-sm placeholder-zinc-500"
@@ -182,7 +239,7 @@ const FindDoctorsPage = () => {
               <select
                 value={specialization}
                 onChange={(e) => setSpecialization(e.target.value)}
-                className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:border-purple-500/50 outline-none transition-colors"
+                className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm outline-none"
               >
                 {specializations.map((spec) => (
                   <option key={spec} value={spec === 'All Specializations' ? '' : spec}>
@@ -192,7 +249,7 @@ const FindDoctorsPage = () => {
               </select>
             </div>
 
-            {/* Distance Slider */}
+            {/* Distance */}
             <div>
               <label className="block text-sm font-semibold text-zinc-300 mb-2">
                 Distance: <span className="text-purple-400">{maxDistance}km</span>
@@ -200,18 +257,14 @@ const FindDoctorsPage = () => {
               <input
                 type="range"
                 min="1"
-                max="50"
+                max="10000"
                 value={maxDistance}
                 onChange={(e) => setMaxDistance(parseInt(e.target.value))}
-                className="w-full accent-purple-500 cursor-pointer"
+                className="w-full accent-purple-500"
               />
-              <div className="flex justify-between text-xs text-zinc-500 mt-2">
-                <span>1km</span>
-                <span>50km</span>
-              </div>
             </div>
 
-            {/* Fee Slider */}
+            {/* Fee */}
             <div>
               <label className="block text-sm font-semibold text-zinc-300 mb-2">
                 Max Fee: <span className="text-purple-400">₹{maxFee}</span>
@@ -223,25 +276,21 @@ const FindDoctorsPage = () => {
                 step="50"
                 value={maxFee}
                 onChange={(e) => setMaxFee(parseInt(e.target.value))}
-                className="w-full accent-purple-500 cursor-pointer"
+                className="w-full accent-purple-500"
               />
-              <div className="flex justify-between text-xs text-zinc-500 mt-2">
-                <span>₹100</span>
-                <span>₹2000</span>
-              </div>
             </div>
 
-            {/* Reset Button */}
+            {/* Reset */}
             <button
               onClick={() => {
                 setSearchTerm('');
                 setSpecialization('');
-                setMaxDistance(10);
+                setMaxDistance(10000);
                 setMaxFee(1000);
               }}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+              className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-sm font-medium"
             >
-              Reset Filters
+              Reset
             </button>
           </div>
         </div>
@@ -257,28 +306,19 @@ const FindDoctorsPage = () => {
               {filteredDoctors.map((doctor) => (
                 <div
                   key={doctor.id}
-                  className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 group"
+                  className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 hover:border-purple-500/50 transition-all"
                 >
                   <div className="flex flex-col md:flex-row gap-6">
-                    {/* Doctor Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-3">
+                    {/* Info */}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="text-xl font-bold text-white">{doctor.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
+                          <h3 className="text-lg font-bold text-white">{doctor.name}</h3>
+                          <p className="text-sm text-zinc-400 flex items-center gap-2 mt-1">
                             <Stethoscope className="w-4 h-4 text-purple-400" />
-                            <p className="text-sm text-zinc-400">{doctor.specialization}</p>
-                          </div>
+                            {doctor.specialization}
+                          </p>
                         </div>
-                        {doctor.available ? (
-                          <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">
-                            Available
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-semibold rounded-full border border-red-500/30">
-                            Unavailable
-                          </span>
-                        )}
                       </div>
 
                       {/* Rating */}
@@ -287,56 +327,52 @@ const FindDoctorsPage = () => {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`w-4 h-4 ${
-                                i < Math.floor(doctor.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-600'
+                              className={`w-3 h-3 ${
+                                i < Math.floor(doctor.rating)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-zinc-600'
                               }`}
                             />
                           ))}
                         </div>
-                        <span className="text-sm font-semibold text-white">{doctor.rating}</span>
-                        <span className="text-xs text-zinc-500">({doctor.reviews} reviews)</span>
+                        <span className="text-xs text-zinc-400">
+                          {doctor.rating > 0 ? `${doctor.rating} (${doctor.reviews})` : 'New'}
+                        </span>
                       </div>
 
                       {/* Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm mb-4">
+                      <div className="grid grid-cols-3 gap-3 text-sm mb-3">
                         <div className="flex items-center gap-2 text-zinc-400">
                           <Clock className="w-4 h-4 text-cyan-400" />
-                          <span>{doctor.experience}</span>
+                          {doctor.experience}
                         </div>
                         <div className="flex items-center gap-2 text-zinc-400">
                           <DollarSign className="w-4 h-4 text-green-400" />
-                          <span>₹{doctor.fee}</span>
+                          ₹{doctor.fee}
                         </div>
                         <div className="flex items-center gap-2 text-zinc-400">
                           <MapPin className="w-4 h-4 text-orange-400" />
-                          <span>{doctor.distance} km away</span>
+                          {typeof doctor.distance === 'number' ? `${doctor.distance} km` : 'N/A'}
                         </div>
                       </div>
 
-                      {/* Clinic Info */}
-                      <div className="bg-zinc-800/30 rounded-lg p-3 mb-4">
-                        <p className="text-sm font-semibold text-white">{doctor.clinic}</p>
+                      {/* Clinic */}
+                      <div className="bg-zinc-800/30 rounded-lg p-3 text-sm">
+                        <p className="font-semibold text-white text-sm">{doctor.clinic}</p>
                         <p className="text-xs text-zinc-400 mt-1 flex items-center gap-1">
-                          <MapPinOff className="w-3 h-3" />
-                          {doctor.address}
-                        </p>
-                        <p className="text-xs text-zinc-400 mt-2 flex items-center gap-1">
                           <Phone className="w-3 h-3" />
                           {doctor.phone}
                         </p>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-3 md:justify-end">
+                    {/* Book Button */}
+                    <div className="flex md:items-end">
                       <button
-                        disabled={!doctor.available}
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/50"
+                        onClick={() => handleBookNow(doctor)}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
                       >
                         Book Now
-                      </button>
-                      <button className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-                        View Profile
                       </button>
                     </div>
                   </div>
@@ -346,12 +382,24 @@ const FindDoctorsPage = () => {
           ) : (
             <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-12 text-center">
               <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-              <p className="text-lg font-semibold text-white mb-2">No doctors found</p>
-              <p className="text-zinc-400">Try adjusting your filters or search criteria</p>
+              <p className="text-lg font-semibold text-white">No doctors found</p>
+              <p className="text-zinc-400">Try adjusting filters</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {showBookingModal && selectedDoctor && (
+        <BookingModal
+          doctor={selectedDoctor}
+          onClose={() => {
+            setShowBookingModal(false);
+            setSelectedDoctor(null);
+          }}
+          onConfirm={handleBookingConfirm}
+        />
+      )}
     </div>
   );
 };

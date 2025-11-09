@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
 
   // Verify token on app load
   useEffect(() => {
-    const storedToken = sessionStorage.getItem('token');
+    const storedToken = localStorage.getItem('token');
     if (storedToken) {
       verifyToken(storedToken);
     } else {
@@ -31,11 +31,15 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         setToken(tokenToVerify);
       } else {
-        sessionStorage.removeItem('token');
+        localStorage.removeItem('token');
+        setUser(null);
+        setToken(null);
       }
     } catch (err) {
       console.error('Token verification failed:', err);
-      sessionStorage.removeItem('token');
+      localStorage.removeItem('token');
+      setUser(null);
+      setToken(null);
     } finally {
       setLoading(false);
     }
@@ -52,7 +56,7 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        sessionStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
         return data.user;
@@ -79,7 +83,7 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        sessionStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
         return data.user;
@@ -106,7 +110,7 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        sessionStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
         return data.user;
@@ -123,14 +127,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    sessionStorage.removeItem('token');
+    localStorage.removeItem('token');
     setToken(null);
     setUser(null);
     setError(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, error, login, registerPatient, registerDoctor, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        error,
+        login,
+        registerPatient,
+        registerDoctor,
+        logout
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
