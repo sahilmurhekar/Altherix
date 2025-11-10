@@ -135,50 +135,72 @@ const AppointmentsPage = () => {
     }
   };
 
-  const handleSubmitRating = async () => {
-    if (rating === 0) {
-      alert('Please select a rating');
-      return;
+ const handleSubmitRating = async () => {
+  if (rating === 0) {
+    alert('Please select a rating');
+    return;
+  }
+
+  try {
+    setSubmittingRating(true);
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(`${SERVER_URL}/api/appointments/submit-rating`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        doctorId: selectedAppointment.doctorId._id || selectedAppointment.doctorId.id,
+        // FIX: Pass the appointmentId so the backend can mark it as rated
+        appointmentId: selectedAppointment._id || selectedAppointment.id,
+        rating: rating,
+        review: review
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to submit rating');
     }
 
-    try {
-      setSubmittingRating(true);
-      const token = localStorage.getItem('token');
+    // --- FIX START ---
+    // Get the updated appointment from the response
+    const data = await response.json();
+    const updatedAppointment = data.appointment;
 
-      const response = await fetch(`${SERVER_URL}/api/appointments/submit-rating`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          doctorId: selectedAppointment.doctorId._id || selectedAppointment.doctorId.id,
-          rating: rating,
-          review: review
-        })
-      });
+    // Update the main appointments list
+    setAppointments(prevAppointments =>
+      prevAppointments.map(apt =>
+        apt._id === updatedAppointment.id
+          ? { ...apt, isRated: true, patientRating: rating, patientReview: review }
+          : apt
+      )
+    );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit rating');
-      }
+    // Update the appointment in the modal
+    setSelectedAppointment(prev =>
+      prev ? { ...prev, isRated: true, patientRating: rating, patientReview: review } : null
+    );
+    // --- FIX END ---
 
-      alert('✅ Thank you! Your rating has been submitted');
+    alert('✅ Thank you! Your rating has been submitted');
 
-      await fetchAppointments();
+    // Close the modals
+    setShowRatingModal(false);
+    setShowModal(false);
+    setSelectedAppointment(null);
+    setRating(0);
+    setReview('');
 
-      setShowRatingModal(false);
-      setShowModal(false);
-      setSelectedAppointment(null);
-      setRating(0);
-      setReview('');
-    } catch (err) {
-      console.error('Rating error:', err);
-      alert(`❌ ${err.message}`);
-    } finally {
-      setSubmittingRating(false);
-    }
-  };
+  } catch (err) {
+    console.error('Rating error:', err);
+    alert(`❌ ${err.message}`);
+  } finally {
+    setSubmittingRating(false);
+  }
+};
 
   const filtered = filterAppointments();
 

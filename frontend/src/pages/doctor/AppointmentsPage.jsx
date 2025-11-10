@@ -554,6 +554,7 @@ const DoctorAppointmentsPage = () => {
                         onClick={() => {
                           setSelectedAppointment(apt);
                           setShowRejectModal(true);
+                          setShowModal(true); // <-- ADD THIS LINE
                         }}
                         className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 py-2 rounded-lg text-sm font-medium transition-colors"
                       >

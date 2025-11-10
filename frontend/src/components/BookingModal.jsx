@@ -79,22 +79,28 @@ const BookingModal = ({ doctor, onClose, onConfirm }) => {
     fetchAvailableSlots();
   }, [selectedDate, doctor.id]);
 
+  // ========== GET DATE OBJECT FROM STRING - NEW HELPER ==========
+const getDateFromString = (dateStr) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
   // ========== FORMAT DATE - FIXED ==========
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr + 'T00:00:00'); // Force local timezone
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+const formatDate = (dateStr) => {
+  const date = getDateFromString(dateStr);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
 
   // ========== GET DAY NAME - FIXED ==========
-  const getDayName = (dateStr) => {
-    const date = new Date(dateStr + 'T00:00:00'); // Force local timezone
-    return date.toLocaleDateString('en-US', { weekday: 'long' });
-  };
+const getDayName = (dateStr) => {
+  const date = getDateFromString(dateStr);
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+};
 
   // ========== HANDLE DATE SELECTION ==========
   const handleDateSelect = (date) => {

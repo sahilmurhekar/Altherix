@@ -114,7 +114,10 @@ export const getAvailableDatesForMonth = async (req, res) => {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
 
-      const dateStr = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
 
       // Get booked slots for this date
       const bookedAppointments = await Appointment.find({
@@ -437,7 +440,7 @@ export const markAppointmentComplete = async (req, res) => {
 // ========== SUBMIT RATING ==========
 export const submitRating = async (req, res) => {
   try {
-    const { doctorId, rating, review } = req.body;
+    const { doctorId, appointmentId, rating, review } = req.body;
     const patientId = req.userId; // From JWT
 
     if (!doctorId || !rating) {
@@ -455,11 +458,14 @@ export const submitRating = async (req, res) => {
     }
 
     // Find the most recent appointment between this patient and doctor
-    const appointment = await Appointment.findOne({
-      patientId,
-      doctorId,
-      status: { $in: ['completed', 'pending', 'confirmed'] }
-    }).sort({ appointmentDate: -1, appointmentTime: -1 });
+    if (!appointmentId) {
+  return res.status(400).json({ message: 'appointmentId required' });
+}
+
+const appointment = await Appointment.findOne({
+  _id: appointmentId,
+  patientId: patientId // Ensure the patient owns this appointment
+});
 
     if (!appointment) {
       return res.status(404).json({ message: 'No appointment found' });
