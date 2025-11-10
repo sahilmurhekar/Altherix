@@ -35,7 +35,12 @@ const generateAvailableSlots = (availability, bookedSlots, targetDate) => {
       // Check if slot is already booked
       const isBooked = bookedSlots.includes(timeStr);
 
-      if (!isBooked) {
+      // Check if slot is in skip list
+      const isSkipped = availability.skipSlots?.some(skip =>
+        skip.date === targetDate && skip.time === timeStr
+      );
+
+      if (!isBooked && !isSkipped) {
         slots.push(timeStr);
       }
 
@@ -231,7 +236,7 @@ export const bookAppointment = async (req, res) => {
 export const updateDoctorAvailability = async (req, res) => {
   try {
     const doctorId = req.userId; // From JWT
-    const { schedule, slotDuration, holidays, breakTime, isBookingOpen, maxPatientsPerDay } = req.body;
+    const { schedule, slotDuration, holidays, breakTime, skipSlots, isBookingOpen, maxPatientsPerDay } = req.body;
 
     if (!schedule || !Array.isArray(schedule)) {
       return res.status(400).json({ message: 'Valid schedule array required' });
@@ -252,6 +257,7 @@ export const updateDoctorAvailability = async (req, res) => {
         slotDuration: slotDuration || 30,
         holidays: holidays || [],
         breakTime: breakTime || [],
+        skipSlots: skipSlots || [],
         isBookingOpen: isBookingOpen !== undefined ? isBookingOpen : true,
         maxPatientsPerDay: maxPatientsPerDay || null
       });
@@ -260,6 +266,7 @@ export const updateDoctorAvailability = async (req, res) => {
       availability.slotDuration = slotDuration || availability.slotDuration;
       availability.holidays = holidays || availability.holidays;
       availability.breakTime = breakTime || availability.breakTime;
+      availability.skipSlots = skipSlots || availability.skipSlots;
       availability.isBookingOpen = isBookingOpen !== undefined ? isBookingOpen : availability.isBookingOpen;
       availability.maxPatientsPerDay = maxPatientsPerDay !== undefined ? maxPatientsPerDay : availability.maxPatientsPerDay;
       availability.updatedAt = new Date();
@@ -303,8 +310,8 @@ export const getPatientAppointments = async (req, res) => {
     if (status) query.status = status;
 
     const appointments = await Appointment.find(query)
-      .populate('doctorId', 'name specialization phone')
-      .sort({ appointmentDate: -1 });
+      .populate('doctorId', 'name specialization phone clinicAddress clinicLocation consultationFee')
+      .sort({ appointmentDate: -1, appointmentTime: -1 });
 
     res.json({ appointments });
   } catch (err) {
@@ -332,9 +339,99 @@ export const getDoctorAppointments = async (req, res) => {
   }
 };
 
-// ========== SUBMIT RATING ==========
-// Add this function to controllers/appointmentController.js
+// ========== CANCEL APPOINTMENT ==========
+export const cancelAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const userId = req.userId; // From JWT
+    const { cancellationReason } = req.body;
 
+    if (!appointmentId) {
+      return res.status(400).json({ message: 'appointmentId required' });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Verify user is either the patient or doctor
+    if (appointment.patientId.toString() !== userId && appointment.doctorId.toString() !== userId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Check if appointment can be cancelled
+    const appointmentDateTime = new Date(`${appointment.appointmentDate}T${appointment.appointmentTime}`);
+    if (appointmentDateTime < new Date()) {
+      return res.status(400).json({ message: 'Cannot cancel past appointments' });
+    }
+
+    // Update appointment status
+    appointment.status = 'cancelled';
+    appointment.cancelledBy = appointment.patientId.toString() === userId ? 'patient' : 'doctor';
+    appointment.cancellationReason = cancellationReason || '';
+    appointment.updatedAt = new Date();
+
+    await appointment.save();
+
+    res.json({
+      message: 'Appointment cancelled successfully',
+      appointment
+    });
+  } catch (err) {
+    console.error('Cancel error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ========== MARK APPOINTMENT AS COMPLETE ==========
+export const markAppointmentComplete = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const userId = req.userId; // From JWT
+
+    if (!appointmentId) {
+      return res.status(400).json({ message: 'appointmentId required' });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Verify user is the patient
+    if (appointment.patientId.toString() !== userId) {
+      return res.status(403).json({ message: 'Only patients can mark appointments as complete' });
+    }
+
+    // Check if appointment is in the past
+    const appointmentDateTime = new Date(`${appointment.appointmentDate}T${appointment.appointmentTime}`);
+    if (appointmentDateTime >= new Date()) {
+      return res.status(400).json({ message: 'Cannot mark future appointments as complete' });
+    }
+
+    // Check if already cancelled
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({ message: 'Cannot mark cancelled appointments as complete' });
+    }
+
+    // Update appointment status
+    appointment.status = 'completed';
+    appointment.updatedAt = new Date();
+
+    await appointment.save();
+
+    res.json({
+      message: 'Appointment marked as completed',
+      appointment
+    });
+  } catch (err) {
+    console.error('Mark complete error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ========== SUBMIT RATING ==========
 export const submitRating = async (req, res) => {
   try {
     const { doctorId, rating, review } = req.body;
@@ -354,6 +451,22 @@ export const submitRating = async (req, res) => {
       return res.status(400).json({ message: 'Invalid doctor' });
     }
 
+    // Find the most recent appointment between this patient and doctor
+    const appointment = await Appointment.findOne({
+      patientId,
+      doctorId,
+      status: { $in: ['completed', 'pending', 'confirmed'] }
+    }).sort({ appointmentDate: -1, appointmentTime: -1 });
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'No appointment found' });
+    }
+
+    // Check if already rated
+    if (appointment.isRated) {
+      return res.status(400).json({ message: 'You have already rated this appointment' });
+    }
+
     // Calculate new average rating
     const currentReviews = doctor.reviews || 0;
     const currentRating = doctor.rating || 0;
@@ -367,6 +480,13 @@ export const submitRating = async (req, res) => {
     doctor.reviews = newReviewCount;
     await doctor.save();
 
+    // Mark appointment as rated
+    appointment.isRated = true;
+    appointment.patientRating = rating;
+    appointment.patientReview = review || null;
+    appointment.updatedAt = new Date();
+    await appointment.save();
+
     res.json({
       message: 'Rating submitted successfully',
       doctor: {
@@ -374,6 +494,10 @@ export const submitRating = async (req, res) => {
         name: doctor.name,
         rating: doctor.rating,
         reviews: doctor.reviews
+      },
+      appointment: {
+        id: appointment._id,
+        isRated: appointment.isRated
       }
     });
   } catch (err) {

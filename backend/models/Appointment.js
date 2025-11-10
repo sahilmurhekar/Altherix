@@ -41,6 +41,11 @@ const appointmentSchema = new mongoose.Schema({
     default: 'in-person'
   },
 
+  isRated: {
+    type: Boolean,
+    default: false
+  },
+  
   consultationFee: {
     type: Number,
     required: true

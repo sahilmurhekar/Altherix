@@ -43,6 +43,23 @@ const doctorAvailabilitySchema = new mongoose.Schema({
     default: []
   },
 
+  skipSlots: [
+    {
+      date: {
+        type: String, // "YYYY-MM-DD" format
+        required: true
+      },
+      time: {
+        type: String, // "HH:MM" format
+        required: true
+      },
+      reason: {
+        type: String,
+        default: 'Personal break'
+      }
+    }
+  ],
+
   breakTime: [
     {
       startTime: String, // e.g., "12:00" - lunch break

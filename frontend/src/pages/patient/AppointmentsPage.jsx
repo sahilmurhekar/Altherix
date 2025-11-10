@@ -14,8 +14,12 @@ import {
   Stethoscope,
   FileText,
   Pill,
-  ArrowRight
+  ArrowRight,
+  X,
+  Star
 } from 'lucide-react';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
 
 const AppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
@@ -23,76 +27,42 @@ const AppointmentsPage = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [marking, setMarking] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [error, setError] = useState('');
+
+  // ========== FETCH APPOINTMENTS ==========
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/my-appointments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+
+      const data = await response.json();
+      setAppointments(data.appointments || []);
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setError('Failed to load appointments');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate fetching appointments
-    setTimeout(() => {
-      const mockAppointments = [
-        {
-          id: 1,
-          doctor: 'Dr. Rajesh Kumar',
-          specialization: 'Cardiology',
-          clinic: 'Heart Care Clinic',
-          address: '123 MG Road, Bangalore',
-          phone: '+91 98765 43210',
-          date: '2024-04-15',
-          time: '10:30 AM',
-          duration: '30 mins',
-          status: 'confirmed',
-          consultationMode: 'in-person',
-          reasonForVisit: 'Regular checkup',
-          notes: 'Please bring previous reports'
-        },
-        {
-          id: 2,
-          doctor: 'Dr. Priya Singh',
-          specialization: 'General Medicine',
-          clinic: 'Health Plus Hospital',
-          address: '456 Whitefield, Bangalore',
-          phone: '+91 87654 32109',
-          date: '2024-04-20',
-          time: '02:00 PM',
-          duration: '20 mins',
-          status: 'pending',
-          consultationMode: 'online',
-          reasonForVisit: 'Follow-up consultation',
-          notes: 'Video call will be sent 15 mins before'
-        },
-        {
-          id: 3,
-          doctor: 'Dr. Arjun Patel',
-          specialization: 'Orthopedics',
-          clinic: 'Bone & Joint Center',
-          address: '789 Koramangala, Bangalore',
-          phone: '+91 76543 21098',
-          date: '2024-03-10',
-          time: '03:30 PM',
-          duration: '30 mins',
-          status: 'completed',
-          consultationMode: 'in-person',
-          reasonForVisit: 'Knee pain treatment',
-          notes: 'Follow-up appointment scheduled',
-          prescription: 'Prescribed medication and physiotherapy'
-        },
-        {
-          id: 4,
-          doctor: 'Dr. Neha Sharma',
-          specialization: 'Dermatology',
-          clinic: 'Skin Wellness Clinic',
-          address: '321 Indiranagar, Bangalore',
-          phone: '+91 65432 10987',
-          date: '2024-02-28',
-          time: '11:00 AM',
-          duration: '20 mins',
-          status: 'cancelled',
-          consultationMode: 'online',
-          reasonForVisit: 'Skin consultation',
-          notes: 'Cancelled by patient'
-        }
-      ];
-      setAppointments(mockAppointments);
-      setLoading(false);
-    }, 500);
+    fetchAppointments();
   }, []);
 
   const getStatusColor = (status) => {
@@ -110,16 +80,158 @@ const AppointmentsPage = () => {
     }
   };
 
+  const isAppointmentPast = (date, time) => {
+    const appointmentDateTime = new Date(`${date}T${time}`);
+    return appointmentDateTime < new Date();
+  };
+
   const filterAppointments = () => {
-    const now = new Date();
     return appointments.filter((apt) => {
-      const aptDate = new Date(apt.date);
+      if (apt.status === 'cancelled') {
+        return activeTab === 'past';
+      }
+
+      const isPast = isAppointmentPast(apt.appointmentDate, apt.appointmentTime);
+
       if (activeTab === 'upcoming') {
-        return aptDate >= now && (apt.status === 'confirmed' || apt.status === 'pending');
+        return !isPast && (apt.status === 'confirmed' || apt.status === 'pending');
       } else {
-        return aptDate < now || apt.status === 'cancelled';
+        return isPast || apt.status === 'cancelled';
       }
     });
+  };
+
+  const isAppointmentRated = (appointmentId) => {
+    const appointment = appointments.find(apt => apt._id === appointmentId);
+    return appointment?.isRated || false;
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    try {
+      setCancelling(true);
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          appointmentId: selectedAppointment.id || selectedAppointment._id,
+          cancellationReason: cancelReason
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to cancel appointment');
+      }
+
+      alert('✅ Appointment cancelled successfully');
+
+      // Refetch appointments to get updated data
+      await fetchAppointments();
+
+      // Close modals and reset
+      setShowCancelModal(false);
+      setShowModal(false);
+      setSelectedAppointment(null);
+      setCancelReason('');
+    } catch (err) {
+      console.error('Cancel error:', err);
+      alert(`❌ ${err.message}`);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleMarkAsComplete = async () => {
+    if (!selectedAppointment) return;
+
+    try {
+      setMarking(true);
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/mark-complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          appointmentId: selectedAppointment._id || selectedAppointment.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mark appointment as complete');
+      }
+
+      alert('✅ Appointment marked as completed');
+
+      // Refetch appointments to get updated data
+      await fetchAppointments();
+
+      // Close modal and reset
+      setShowModal(false);
+      setSelectedAppointment(null);
+    } catch (err) {
+      console.error('Mark complete error:', err);
+      alert(`❌ ${err.message}`);
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  const handleSubmitRating = async () => {
+    if (rating === 0) {
+      alert('Please select a rating');
+      return;
+    }
+
+    try {
+      setSubmittingRating(true);
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/submit-rating`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          doctorId: selectedAppointment.doctorId._id || selectedAppointment.doctorId.id,
+          rating: rating,
+          review: review
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit rating');
+      }
+
+      alert('✅ Thank you! Your rating has been submitted');
+
+      // Refetch appointments to get updated data (including rating status)
+      await fetchAppointments();
+
+      // Close modals and reset
+      setShowRatingModal(false);
+      setShowModal(false);
+      setSelectedAppointment(null);
+      setRating(0);
+      setReview('');
+    } catch (err) {
+      console.error('Rating error:', err);
+      alert(`❌ ${err.message}`);
+    } finally {
+      setSubmittingRating(false);
+    }
   };
 
   const filtered = filterAppointments();
@@ -127,20 +239,23 @@ const AppointmentsPage = () => {
   const AppointmentModal = ({ appointment, onClose }) => {
     if (!appointment) return null;
 
+    const doctor = appointment.doctorId;
+    const isPast = isAppointmentPast(appointment.appointmentDate, appointment.appointmentTime);
+
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Modal Header */}
           <div className="sticky top-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-b border-zinc-700 p-6 flex items-start justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white">{appointment.doctor}</h2>
-              <p className="text-sm text-zinc-400 mt-1">{appointment.specialization}</p>
+              <h2 className="text-2xl font-bold text-white">{doctor.name}</h2>
+              <p className="text-sm text-zinc-400 mt-1">{doctor.specialization}</p>
             </div>
             <button
               onClick={onClose}
               className="text-zinc-400 hover:text-white transition-colors"
             >
-              ✕
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -148,7 +263,13 @@ const AppointmentsPage = () => {
           <div className="p-6 space-y-6">
             {/* Status Badge */}
             <div>
-              <span className={`inline-block px-4 py-2 rounded-full text-sm font-semibold border ${getStatusColor(appointment.status).bg} ${getStatusColor(appointment.status).text} ${getStatusColor(appointment.status).border}`}>
+              <span
+                className={`inline-block px-4 py-2 rounded-full text-sm font-semibold border ${
+                  getStatusColor(appointment.status).bg
+                } ${getStatusColor(appointment.status).text} ${
+                  getStatusColor(appointment.status).border
+                }`}
+              >
                 {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
               </span>
             </div>
@@ -160,18 +281,20 @@ const AppointmentsPage = () => {
                   <Calendar className="w-4 h-4" />
                   Date
                 </p>
-                <p className="text-white font-semibold">{new Date(appointment.date).toLocaleDateString()}</p>
+                <p className="text-white font-semibold">
+                  {new Date(appointment.appointmentDate).toLocaleDateString()}
+                </p>
               </div>
               <div className="bg-zinc-800/30 rounded-lg p-4">
                 <p className="text-xs text-zinc-400 mb-2 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   Time
                 </p>
-                <p className="text-white font-semibold">{appointment.time}</p>
+                <p className="text-white font-semibold">{appointment.appointmentTime}</p>
               </div>
               <div className="bg-zinc-800/30 rounded-lg p-4">
-                <p className="text-xs text-zinc-400 mb-2">Duration</p>
-                <p className="text-white font-semibold">{appointment.duration}</p>
+                <p className="text-xs text-zinc-400 mb-2">Consultation Fee</p>
+                <p className="text-white font-semibold">₹{appointment.consultationFee}</p>
               </div>
               <div className="bg-zinc-800/30 rounded-lg p-4">
                 <p className="text-xs text-zinc-400 mb-2">Mode</p>
@@ -181,22 +304,20 @@ const AppointmentsPage = () => {
 
             {/* Clinic Info */}
             <div className="bg-zinc-800/30 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-semibold text-white">{appointment.clinic}</p>
-              <p className="text-sm text-zinc-400 flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                {appointment.address}
-              </p>
+              <p className="text-sm font-semibold text-white">{doctor.clinicAddress}</p>
               <p className="text-sm text-zinc-400 flex items-center gap-2">
                 <Phone className="w-4 h-4" />
-                {appointment.phone}
+                {doctor.phone}
               </p>
             </div>
 
             {/* Reason for Visit */}
-            <div>
-              <p className="text-sm font-semibold text-zinc-300 mb-2">Reason for Visit</p>
-              <p className="text-white bg-zinc-800/30 rounded-lg p-3">{appointment.reasonForVisit}</p>
-            </div>
+            {appointment.reasonForVisit && (
+              <div>
+                <p className="text-sm font-semibold text-zinc-300 mb-2">Reason for Visit</p>
+                <p className="text-white bg-zinc-800/30 rounded-lg p-3">{appointment.reasonForVisit}</p>
+              </div>
+            )}
 
             {/* Notes */}
             {appointment.notes && (
@@ -206,42 +327,217 @@ const AppointmentsPage = () => {
               </div>
             )}
 
-            {/* Prescription (if completed) */}
-            {appointment.prescription && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                <p className="text-sm font-semibold text-green-400 flex items-center gap-2 mb-2">
-                  <Pill className="w-4 h-4" />
-                  Prescription Available
-                </p>
-                <p className="text-sm text-white">{appointment.prescription}</p>
+            {/* Cancellation Reason (if cancelled) */}
+            {appointment.status === 'cancelled' && appointment.cancellationReason && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <p className="text-sm font-semibold text-red-400 mb-1">Cancellation Reason</p>
+                <p className="text-sm text-white">{appointment.cancellationReason}</p>
               </div>
             )}
 
             {/* Action Buttons */}
-            {appointment.status === 'confirmed' || appointment.status === 'pending' ? (
+            {!isPast && (appointment.status === 'confirmed' || appointment.status === 'pending') && (
               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors">
-                  Reschedule
-                </button>
-                <button className="bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 py-2 rounded-lg font-medium transition-colors border border-red-500/30">
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 py-2 rounded-lg font-medium transition-colors border border-red-500/30"
+                >
                   Cancel
                 </button>
+                <button
+                  onClick={onClose}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                >
+                  Close
+                </button>
               </div>
-            ) : null}
+            )}
 
-            {appointment.status === 'completed' ? (
+            {isPast && appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
-                <button className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  View Reports
+                <button
+                  onClick={handleMarkAsComplete}
+                  disabled={marking}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {marking ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Marking...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Mark Complete
+                    </>
+                  )}
                 </button>
-                <button className="bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors">
-                  Book Again
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  Rate Doctor
                 </button>
               </div>
-            ) : null}
+            )}
+
+            {appointment.status === 'completed' && !appointment.isRated && (
+              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
+                <button
+                  onClick={onClose}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  Rate Doctor
+                </button>
+              </div>
+            )}
+
+            {appointment.status === 'completed' && !appointment.isRated && (
+              <div className="pt-4 border-t border-zinc-700">
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  Rate Doctor
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Cancel Modal */}
+        {showCancelModal && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-white mb-4">Cancel Appointment?</h3>
+              <p className="text-zinc-400 mb-4">
+                Are you sure you want to cancel this appointment? This action cannot be undone.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Reason for Cancellation (Optional)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Tell us why you're cancelling..."
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 resize-none"
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                >
+                  Keep Appointment
+                </button>
+                <button
+                  onClick={handleCancelAppointment}
+                  disabled={cancelling}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-4 h-4" />
+                      Yes, Cancel
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rating Modal */}
+        {showRatingModal && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-white mb-2">Rate Dr. {doctor.name}</h3>
+              <p className="text-sm text-zinc-400 mb-6">How was your experience?</p>
+
+              {/* Star Rating */}
+              <div className="flex gap-2 justify-center mb-6">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className="transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={`w-10 h-10 ${
+                        star <= rating
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-zinc-600 hover:text-yellow-400'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* Review Text */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Your Review (Optional)
+                </label>
+                <textarea
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  placeholder="Share your feedback about the doctor and consultation..."
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 resize-none"
+                  rows="4"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowRatingModal(false);
+                    setRating(0);
+                    setReview('');
+                  }}
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitRating}
+                  disabled={submittingRating || rating === 0}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {submittingRating ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Submit Rating
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -264,6 +560,13 @@ const AppointmentsPage = () => {
         <p className="text-zinc-400">View and manage all your medical appointments</p>
       </div>
 
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400" />
+          <p className="text-red-300">{error}</p>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-4 border-b border-zinc-700">
         <button
@@ -274,7 +577,13 @@ const AppointmentsPage = () => {
               : 'border-transparent text-zinc-400 hover:text-white'
           }`}
         >
-          Upcoming ({appointments.filter((a) => new Date(a.date) >= new Date() && (a.status === 'confirmed' || a.status === 'pending')).length})
+          Upcoming (
+          {appointments.filter(
+            (a) =>
+              !isAppointmentPast(a.appointmentDate, a.appointmentTime) &&
+              (a.status === 'confirmed' || a.status === 'pending')
+          ).length}
+          )
         </button>
         <button
           onClick={() => setActiveTab('past')}
@@ -284,7 +593,13 @@ const AppointmentsPage = () => {
               : 'border-transparent text-zinc-400 hover:text-white'
           }`}
         >
-          Past ({appointments.filter((a) => new Date(a.date) < new Date() || a.status === 'cancelled').length})
+          Past (
+          {appointments.filter(
+            (a) =>
+              isAppointmentPast(a.appointmentDate, a.appointmentTime) ||
+              a.status === 'cancelled'
+          ).length}
+          )
         </button>
       </div>
 
@@ -294,27 +609,32 @@ const AppointmentsPage = () => {
           {filtered.map((appointment) => {
             const statusColor = getStatusColor(appointment.status);
             const StatusIcon = statusColor.icon;
+            const doctor = appointment.doctorId;
+            const isPast = isAppointmentPast(appointment.appointmentDate, appointment.appointmentTime);
 
             return (
               <div
-                key={appointment.id}
+                key={appointment._id}
                 className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
-                onClick={() => {
-                  setSelectedAppointment(appointment);
-                  setShowModal(true);
-                }}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+                  <div className="flex-1" onClick={() => {
+                    setSelectedAppointment(appointment);
+                    setShowModal(true);
+                  }}>
                     <h3 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">
-                      {appointment.doctor}
+                      {doctor.name}
                     </h3>
                     <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2">
                       <Stethoscope className="w-4 h-4" />
-                      {appointment.specialization}
+                      {doctor.specialization}
                     </p>
                   </div>
-                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold border ${statusColor.bg} ${statusColor.text} ${statusColor.border}`}>
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold border ${
+                      statusColor.bg
+                    } ${statusColor.text} ${statusColor.border}`}
+                  >
                     <StatusIcon className="w-4 h-4" />
                     {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                   </div>
@@ -323,29 +643,66 @@ const AppointmentsPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
                   <div className="flex items-center gap-2 text-zinc-400">
                     <Calendar className="w-4 h-4 text-blue-400" />
-                    {new Date(appointment.date).toLocaleDateString()}
+                    {new Date(appointment.appointmentDate).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-2 text-zinc-400">
                     <Clock className="w-4 h-4 text-green-400" />
-                    {appointment.time}
+                    {appointment.appointmentTime}
                   </div>
                   <div className="flex items-center gap-2 text-zinc-400">
                     <MapPin className="w-4 h-4 text-orange-400" />
-                    {appointment.clinic}
+                    {doctor.clinicAddress?.split(',')[0] || 'Clinic'}
                   </div>
                   <div className="flex items-center gap-2 text-zinc-400 capitalize">
-                    {appointment.consultationMode === 'online' ? '📱' : '🏥'} {appointment.consultationMode}
+                    {appointment.consultationMode === 'online' ? '📱' : '🏥'}{' '}
+                    {appointment.consultationMode}
                   </div>
                 </div>
 
-                <div className="text-xs text-zinc-500">
-                  Reason: <span className="text-zinc-300">{appointment.reasonForVisit}</span>
-                </div>
+                {appointment.reasonForVisit && (
+                  <div className="text-xs text-zinc-500 mb-4">
+                    Reason: <span className="text-zinc-300">{appointment.reasonForVisit}</span>
+                  </div>
+                )}
 
-                <div className="mt-4 pt-4 border-t border-zinc-700 flex justify-end">
-                  <button className="text-purple-400 hover:text-purple-300 font-semibold text-sm flex items-center gap-1 transition-colors">
+                <div className="pt-4 border-t border-zinc-700 flex justify-between items-center">
+                  <button
+                    onClick={() => {
+                      setSelectedAppointment(appointment);
+                      setShowModal(true);
+                    }}
+                    className="text-purple-400 hover:text-purple-300 font-semibold text-sm flex items-center gap-1 transition-colors"
+                  >
                     View Details <ArrowRight className="w-3 h-3" />
                   </button>
+
+                  {/* Quick Action Buttons */}
+                  {isPast && appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
+                    <button
+                      onClick={() => {
+                        setSelectedAppointment(appointment);
+                        setShowModal(true);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark Complete
+                    </button>
+                  )}
+
+                  {(appointment.status === 'completed' || (isPast && appointment.status !== 'cancelled')) && !appointment.isRated && (
+                    <button
+                      onClick={() => {
+                        setSelectedAppointment(appointment);
+                        setShowModal(true);
+                        setTimeout(() => setShowRatingModal(true), 100);
+                      }}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                    >
+                      <Star className="w-4 h-4" />
+                      Rate
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -372,6 +729,10 @@ const AppointmentsPage = () => {
           onClose={() => {
             setShowModal(false);
             setSelectedAppointment(null);
+            setShowCancelModal(false);
+            setShowRatingModal(false);
+            setRating(0);
+            setReview('');
           }}
         />
       )}
