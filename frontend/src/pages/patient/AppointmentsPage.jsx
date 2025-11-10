@@ -1,5 +1,3 @@
-// /frontend/src/pages/patient/AppointmentsPage.jsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Calendar,
@@ -10,16 +8,13 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  User,
   Stethoscope,
-  FileText,
-  Pill,
   ArrowRight,
   X,
   Star
 } from 'lucide-react';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+const SERVER_URL = 'http://localhost:5000';
 
 const AppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
@@ -31,7 +26,6 @@ const AppointmentsPage = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
-  const [marking, setMarking] = useState(false);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
@@ -96,14 +90,9 @@ const AppointmentsPage = () => {
       if (activeTab === 'upcoming') {
         return !isPast && (apt.status === 'confirmed' || apt.status === 'pending');
       } else {
-        return isPast || apt.status === 'cancelled';
+        return isPast || apt.status === 'cancelled' || apt.status === 'completed';
       }
     });
-  };
-
-  const isAppointmentRated = (appointmentId) => {
-    const appointment = appointments.find(apt => apt._id === appointmentId);
-    return appointment?.isRated || false;
   };
 
   const handleCancelAppointment = async () => {
@@ -132,10 +121,8 @@ const AppointmentsPage = () => {
 
       alert('✅ Appointment cancelled successfully');
 
-      // Refetch appointments to get updated data
       await fetchAppointments();
 
-      // Close modals and reset
       setShowCancelModal(false);
       setShowModal(false);
       setSelectedAppointment(null);
@@ -145,45 +132,6 @@ const AppointmentsPage = () => {
       alert(`❌ ${err.message}`);
     } finally {
       setCancelling(false);
-    }
-  };
-
-  const handleMarkAsComplete = async () => {
-    if (!selectedAppointment) return;
-
-    try {
-      setMarking(true);
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${SERVER_URL}/api/appointments/mark-complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          appointmentId: selectedAppointment._id || selectedAppointment.id
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to mark appointment as complete');
-      }
-
-      alert('✅ Appointment marked as completed');
-
-      // Refetch appointments to get updated data
-      await fetchAppointments();
-
-      // Close modal and reset
-      setShowModal(false);
-      setSelectedAppointment(null);
-    } catch (err) {
-      console.error('Mark complete error:', err);
-      alert(`❌ ${err.message}`);
-    } finally {
-      setMarking(false);
     }
   };
 
@@ -217,10 +165,8 @@ const AppointmentsPage = () => {
 
       alert('✅ Thank you! Your rating has been submitted');
 
-      // Refetch appointments to get updated data (including rating status)
       await fetchAppointments();
 
-      // Close modals and reset
       setShowRatingModal(false);
       setShowModal(false);
       setSelectedAppointment(null);
@@ -241,6 +187,7 @@ const AppointmentsPage = () => {
 
     const doctor = appointment.doctorId;
     const isPast = isAppointmentPast(appointment.appointmentDate, appointment.appointmentTime);
+    const isRated = appointment.isRated || false;
 
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -353,61 +300,20 @@ const AppointmentsPage = () => {
               </div>
             )}
 
-            {isPast && appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
-              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
-                <button
-                  onClick={handleMarkAsComplete}
-                  disabled={marking}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  {marking ? (
-                    <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Marking...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      Mark Complete
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowRatingModal(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Star className="w-4 h-4" />
-                  Rate Doctor
-                </button>
-              </div>
-            )}
-
-            {appointment.status === 'completed' && !appointment.isRated && (
-              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
-                <button
-                  onClick={onClose}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => setShowRatingModal(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Star className="w-4 h-4" />
-                  Rate Doctor
-                </button>
-              </div>
-            )}
-
-            {appointment.status === 'completed' && !appointment.isRated && (
+            {/* Show Rate Button for Completed Appointments */}
+            {appointment.status === 'completed' && (
               <div className="pt-4 border-t border-zinc-700">
                 <button
                   onClick={() => setShowRatingModal(true)}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  disabled={isRated}
+                  className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                    isRated
+                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                  }`}
                 >
-                  <Star className="w-4 h-4" />
-                  Rate Doctor
+                  <Star className={`w-5 h-5 ${isRated ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                  {isRated ? 'Already Rated' : 'Rate Doctor'}
                 </button>
               </div>
             )}
@@ -597,7 +503,8 @@ const AppointmentsPage = () => {
           {appointments.filter(
             (a) =>
               isAppointmentPast(a.appointmentDate, a.appointmentTime) ||
-              a.status === 'cancelled'
+              a.status === 'cancelled' ||
+              a.status === 'completed'
           ).length}
           )
         </button>
@@ -611,17 +518,19 @@ const AppointmentsPage = () => {
             const StatusIcon = statusColor.icon;
             const doctor = appointment.doctorId;
             const isPast = isAppointmentPast(appointment.appointmentDate, appointment.appointmentTime);
+            const isRated = appointment.isRated;
 
             return (
               <div
                 key={appointment._id}
                 className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
+                onClick={() => {
+                  setSelectedAppointment(appointment);
+                  setShowModal(true);
+                }}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1" onClick={() => {
-                    setSelectedAppointment(appointment);
-                    setShowModal(true);
-                  }}>
+                  <div className="flex-1">
                     <h3 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">
                       {doctor.name}
                     </h3>
@@ -667,7 +576,8 @@ const AppointmentsPage = () => {
 
                 <div className="pt-4 border-t border-zinc-700 flex justify-between items-center">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSelectedAppointment(appointment);
                       setShowModal(true);
                     }}
@@ -676,23 +586,11 @@ const AppointmentsPage = () => {
                     View Details <ArrowRight className="w-3 h-3" />
                   </button>
 
-                  {/* Quick Action Buttons */}
-                  {isPast && appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
+                  {/* Quick Rate Button for Completed */}
+                  {appointment.status === 'completed' && !isRated && (
                     <button
-                      onClick={() => {
-                        setSelectedAppointment(appointment);
-                        setShowModal(true);
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Mark Complete
-                    </button>
-                  )}
-
-                  {(appointment.status === 'completed' || (isPast && appointment.status !== 'cancelled')) && !appointment.isRated && (
-                    <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedAppointment(appointment);
                         setShowModal(true);
                         setTimeout(() => setShowRatingModal(true), 100);
@@ -702,6 +600,13 @@ const AppointmentsPage = () => {
                       <Star className="w-4 h-4" />
                       Rate
                     </button>
+                  )}
+
+                  {appointment.status === 'completed' && isRated===true && (
+                    <div className="flex items-center gap-1 text-yellow-400 text-sm">
+                      <Star className="w-4 h-4 fill-yellow-400" />
+                      <span className="font-semibold">Rated</span>
+                    </div>
                   )}
                 </div>
               </div>

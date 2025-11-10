@@ -10,7 +10,8 @@ import {
   getDoctorAppointments,
   submitRating,
   cancelAppointment,
-  markAppointmentComplete
+  markAppointmentComplete,
+  confirmAppointment
 } from '../controllers/appointmentController.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -40,6 +41,8 @@ router.post('/submit-rating', verifyToken, submitRating);
 router.get('/my-appointments', verifyToken, getPatientAppointments);
 
 // ========== DOCTOR ROUTES ==========
+// Confirm appointment (doctor only)
+router.post('/confirm', verifyToken, confirmAppointment);
 
 // Set/update doctor's availability (requires authentication)
 router.post('/availability/update', verifyToken, updateDoctorAvailability);

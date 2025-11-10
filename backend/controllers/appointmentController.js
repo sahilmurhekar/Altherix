@@ -395,24 +395,27 @@ export const markAppointmentComplete = async (req, res) => {
     }
 
     const appointment = await Appointment.findById(appointmentId);
+
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Verify user is the patient
-    if (appointment.patientId.toString() !== userId) {
-      return res.status(403).json({ message: 'Only patients can mark appointments as complete' });
-    }
+    // ✅ UPDATED: Allow both patient AND doctor to mark as complete
+    const isPatient = appointment.patientId.toString() === userId;
+    const isDoctor = appointment.doctorId.toString() === userId;
 
-    // Check if appointment is in the past
-    const appointmentDateTime = new Date(`${appointment.appointmentDate}T${appointment.appointmentTime}`);
-    if (appointmentDateTime >= new Date()) {
-      return res.status(400).json({ message: 'Cannot mark future appointments as complete' });
+    if (!isDoctor) {
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
     // Check if already cancelled
     if (appointment.status === 'cancelled') {
       return res.status(400).json({ message: 'Cannot mark cancelled appointments as complete' });
+    }
+
+    // Check if already completed
+    if (appointment.status === 'completed') {
+      return res.status(400).json({ message: 'Appointment already completed' });
     }
 
     // Update appointment status
@@ -502,6 +505,51 @@ export const submitRating = async (req, res) => {
     });
   } catch (err) {
     console.error('Rating error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+// ========== CONFIRM APPOINTMENT (DOCTOR ONLY) ==========
+export const confirmAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const doctorId = req.userId; // From JWT
+
+    if (!appointmentId) {
+      return res.status(400).json({ message: 'appointmentId required' });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Verify user is the doctor
+    if (appointment.doctorId.toString() !== doctorId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Check if appointment can be confirmed
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({ message: 'Cannot confirm cancelled appointments' });
+    }
+
+    if (appointment.status === 'completed') {
+      return res.status(400).json({ message: 'Appointment already completed' });
+    }
+
+    // Update appointment status
+    appointment.status = 'confirmed';
+    appointment.updatedAt = new Date();
+
+    await appointment.save();
+
+    res.json({
+      message: 'Appointment confirmed successfully',
+      appointment
+    });
+  } catch (err) {
+    console.error('Confirm error:', err);
     res.status(500).json({ message: err.message });
   }
 };

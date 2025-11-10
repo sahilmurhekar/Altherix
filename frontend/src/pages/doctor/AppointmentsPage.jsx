@@ -1,5 +1,3 @@
-// /frontend/src/pages/doctor/AppointmentsPage.jsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Calendar,
@@ -12,12 +10,12 @@ import {
   XCircle,
   User,
   Search,
-  MessageSquare,
   X,
-  ArrowRight
+  ArrowRight,
+  Mail
 } from 'lucide-react';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+const SERVER_URL = 'http://localhost:5000';
 
 const DoctorAppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
@@ -28,72 +26,30 @@ const DoctorAppointmentsPage = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [notes, setNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
-  const [confirming, setConfirming] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Fetch appointments
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setAppointments([
-          {
-            id: 1,
-            patient: 'Rajesh Singh',
-            date: '2024-03-20',
-            time: '10:30 AM',
-            type: 'Consultation',
-            reason: 'General checkup',
-            status: 'pending',
-            phone: '9876543210',
-            email: 'rajesh@example.com',
-            address: '123 Main St, City'
-          },
-          {
-            id: 2,
-            patient: 'Priya Sharma',
-            date: '2024-03-20',
-            time: '11:00 AM',
-            type: 'Follow-up',
-            reason: 'Blood pressure monitoring',
-            status: 'confirmed',
-            phone: '9876543211',
-            email: 'priya@example.com',
-            address: '456 Oak Ave, City'
-          },
-          {
-            id: 3,
-            patient: 'Amit Patel',
-            date: '2024-03-19',
-            time: '2:30 PM',
-            type: 'Check-up',
-            reason: 'Skin consultation',
-            status: 'completed',
-            phone: '9876543212',
-            email: 'amit@example.com',
-            address: '789 Pine Rd, City'
-          },
-          {
-            id: 4,
-            patient: 'Neha Sharma',
-            date: '2024-03-18',
-            time: '3:00 PM',
-            type: 'Consultation',
-            reason: 'Routine checkup',
-            status: 'cancelled',
-            phone: '9876543213',
-            email: 'neha@example.com',
-            address: '321 Elm St, City'
-          }
-        ]);
-        setLoading(false);
-      }, 500);
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/doctor-appointments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+
+      const data = await response.json();
+      setAppointments(data.appointments || []);
     } catch (err) {
       console.error('Error fetching appointments:', err);
       setError('Failed to load appointments');
+    } finally {
       setLoading(false);
     }
   };
@@ -106,7 +62,7 @@ const DoctorAppointmentsPage = () => {
     let filtered = appointments;
     if (searchTerm) {
       filtered = filtered.filter((apt) =>
-        apt.patient.toLowerCase().includes(searchTerm.toLowerCase())
+        apt.patientId?.name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     filtered = filtered.filter((apt) => apt.status === activeTab);
@@ -128,40 +84,40 @@ const DoctorAppointmentsPage = () => {
     }
   };
 
-  const handleConfirmClick = (apt) => {
-    setSelectedAppointment(apt);
-    setNotes('');
-    setShowModal(true);
+  const isAppointmentPast = (date, time) => {
+    const appointmentDateTime = new Date(`${date}T${time}`);
+    return appointmentDateTime < new Date();
   };
 
-  const handleRejectClick = (apt) => {
-    setSelectedAppointment(apt);
-    setRejectionReason('');
-    setShowRejectModal(true);
-  };
-
-  const handleConfirmAppointment = async () => {
-    if (!selectedAppointment) return;
-
+  const handleConfirmAppointment = async (apt) => {
     try {
-      setConfirming(true);
+      setActionLoading(true);
       const token = localStorage.getItem('token');
 
-      // Simulate API call
-      setTimeout(() => {
-        setAppointments(
-          appointments.map((apt) =>
-            apt.id === selectedAppointment.id ? { ...apt, status: 'confirmed' } : apt
-          )
-        );
-        setShowModal(false);
-        setNotes('');
-        setConfirming(false);
-      }, 500);
+      const response = await fetch(`${SERVER_URL}/api/appointments/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          appointmentId: apt._id || apt.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to confirm appointment');
+      }
+
+      alert('✅ Appointment confirmed successfully');
+      await fetchAppointments();
+      setShowModal(false);
     } catch (err) {
       console.error('Error confirming appointment:', err);
-      setError('Failed to confirm appointment');
-      setConfirming(false);
+      alert(`❌ ${err.message}`);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -169,29 +125,77 @@ const DoctorAppointmentsPage = () => {
     if (!selectedAppointment) return;
 
     try {
-      setConfirming(true);
+      setActionLoading(true);
       const token = localStorage.getItem('token');
 
-      // Simulate API call
-      setTimeout(() => {
-        setAppointments(
-          appointments.map((apt) =>
-            apt.id === selectedAppointment.id ? { ...apt, status: 'cancelled' } : apt
-          )
-        );
-        setShowRejectModal(false);
-        setRejectionReason('');
-        setConfirming(false);
-      }, 500);
+      const response = await fetch(`${SERVER_URL}/api/appointments/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          appointmentId: selectedAppointment._id || selectedAppointment.id,
+          cancellationReason: rejectionReason
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to reject appointment');
+      }
+
+      alert('✅ Appointment rejected');
+      await fetchAppointments();
+      setShowRejectModal(false);
+      setShowModal(false);
+      setRejectionReason('');
     } catch (err) {
       console.error('Error rejecting appointment:', err);
-      setError('Failed to reject appointment');
-      setConfirming(false);
+      alert(`❌ ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleMarkComplete = async (apt) => {
+    try {
+      setActionLoading(true);
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${SERVER_URL}/api/appointments/mark-complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          appointmentId: apt._id || apt.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mark as complete');
+      }
+
+      alert('✅ Appointment marked as completed');
+      await fetchAppointments();
+      setShowModal(false);
+    } catch (err) {
+      console.error('Error marking complete:', err);
+      alert(`❌ ${err.message}`);
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const AppointmentModal = ({ appointment, onClose }) => {
     if (!appointment) return null;
+
+    const patient = appointment.patientId;
+    const isPast = isAppointmentPast(appointment.appointmentDate, appointment.appointmentTime);
+    const canMarkComplete = isPast && (appointment.status === 'confirmed' || appointment.status === 'pending');
 
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -199,8 +203,8 @@ const DoctorAppointmentsPage = () => {
           {/* Modal Header */}
           <div className="sticky top-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-b border-zinc-700 p-6 flex items-start justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white">{appointment.patient}</h2>
-              <p className="text-sm text-zinc-400 mt-1">{appointment.type}</p>
+              <h2 className="text-2xl font-bold text-white">{patient?.name}</h2>
+              <p className="text-sm text-zinc-400 mt-1">Patient Appointment</p>
             </div>
             <button
               onClick={onClose}
@@ -233,7 +237,7 @@ const DoctorAppointmentsPage = () => {
                   Date
                 </p>
                 <p className="text-white font-semibold">
-                  {new Date(appointment.date).toLocaleDateString()}
+                  {new Date(appointment.appointmentDate).toLocaleDateString()}
                 </p>
               </div>
               <div className="bg-zinc-800/30 rounded-lg p-4">
@@ -241,36 +245,57 @@ const DoctorAppointmentsPage = () => {
                   <Clock className="w-4 h-4" />
                   Time
                 </p>
-                <p className="text-white font-semibold">{appointment.time}</p>
+                <p className="text-white font-semibold">{appointment.appointmentTime}</p>
               </div>
               <div className="bg-zinc-800/30 rounded-lg p-4">
-                <p className="text-xs text-zinc-400 mb-2 flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  Phone
-                </p>
-                <p className="text-white font-semibold">{appointment.phone}</p>
+                <p className="text-xs text-zinc-400 mb-2">Consultation Fee</p>
+                <p className="text-white font-semibold">₹{appointment.consultationFee}</p>
               </div>
               <div className="bg-zinc-800/30 rounded-lg p-4">
-                <p className="text-xs text-zinc-400 mb-2 flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Type
-                </p>
-                <p className="text-white font-semibold">{appointment.type}</p>
+                <p className="text-xs text-zinc-400 mb-2">Mode</p>
+                <p className="text-white font-semibold capitalize">{appointment.consultationMode}</p>
               </div>
             </div>
 
             {/* Patient Info */}
             <div className="bg-zinc-800/30 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-semibold text-white">Patient Information</p>
-              <p className="text-sm text-zinc-400">Email: {appointment.email}</p>
-              <p className="text-sm text-zinc-400">Address: {appointment.address}</p>
+              <p className="text-sm font-semibold text-white mb-3">Patient Information</p>
+              <p className="text-sm text-zinc-400 flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                {patient?.phone || 'N/A'}
+              </p>
+              <p className="text-sm text-zinc-400 flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                {patient?.email || 'N/A'}
+              </p>
             </div>
 
             {/* Reason */}
-            {appointment.reason && (
+            {appointment.reasonForVisit && (
               <div>
                 <p className="text-sm font-semibold text-zinc-300 mb-2">Reason for Visit</p>
-                <p className="text-white bg-zinc-800/30 rounded-lg p-3">{appointment.reason}</p>
+                <p className="text-white bg-zinc-800/30 rounded-lg p-3">{appointment.reasonForVisit}</p>
+              </div>
+            )}
+
+            {/* Notes */}
+            {appointment.notes && (
+              <div>
+                <p className="text-sm font-semibold text-zinc-300 mb-2">Notes</p>
+                <p className="text-white bg-zinc-800/30 rounded-lg p-3">{appointment.notes}</p>
+              </div>
+            )}
+
+            {/* Cancellation Reason */}
+            {appointment.status === 'cancelled' && appointment.cancellationReason && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <p className="text-sm font-semibold text-red-400 mb-1">Cancellation Reason</p>
+                <p className="text-sm text-white">{appointment.cancellationReason}</p>
+                {appointment.cancelledBy && (
+                  <p className="text-xs text-zinc-500 mt-2">
+                    Cancelled by: {appointment.cancelledBy === 'doctor' ? 'You' : 'Patient'}
+                  </p>
+                )}
               </div>
             )}
 
@@ -278,36 +303,66 @@ const DoctorAppointmentsPage = () => {
             {appointment.status === 'pending' && (
               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
                 <button
-                  onClick={() => handleRejectClick(appointment)}
-                  className="bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 py-2 rounded-lg font-medium transition-colors border border-red-500/30"
+                  onClick={() => setShowRejectModal(true)}
+                  disabled={actionLoading}
+                  className="bg-red-600/20 hover:bg-red-600/30 disabled:opacity-50 text-red-400 hover:text-red-300 py-2 rounded-lg font-medium transition-colors border border-red-500/30"
                 >
                   Reject
                 </button>
                 <button
-                  onClick={onClose}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                  onClick={() => handleConfirmAppointment(appointment)}
+                  disabled={actionLoading}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  Close
+                  {actionLoading ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Confirm
+                    </>
+                  )}
                 </button>
               </div>
             )}
 
-            {appointment.status === 'confirmed' && (
-              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-700">
-                <button className="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Start Consultation
+            {canMarkComplete && (
+              <div className="pt-4 border-t border-zinc-700">
+                <button
+                  onClick={() => handleMarkComplete(appointment)}
+                  disabled={actionLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Marking Complete...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      Mark as Completed
+                    </>
+                  )}
                 </button>
+              </div>
+            )}
+
+            {(appointment.status === 'confirmed' && !isPast) && (
+              <div className="pt-4 border-t border-zinc-700">
                 <button
                   onClick={onClose}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
                 >
                   Close
                 </button>
               </div>
             )}
 
-            {appointment.status === 'completed' && (
+            {(appointment.status === 'completed' || appointment.status === 'cancelled') && (
               <div className="pt-4 border-t border-zinc-700">
                 <button
                   onClick={onClose}
@@ -319,6 +374,57 @@ const DoctorAppointmentsPage = () => {
             )}
           </div>
         </div>
+
+        {/* Reject Modal */}
+        {showRejectModal && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-white mb-4">Reject Appointment?</h3>
+              <p className="text-zinc-400 mb-4">
+                Are you sure you want to reject this appointment with {patient?.name}?
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Reason for Rejection (Optional)
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Tell the patient why you're rejecting..."
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 resize-none"
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectAppointment}
+                  disabled={actionLoading}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      Yes, Reject
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -383,10 +489,13 @@ const DoctorAppointmentsPage = () => {
           {filteredAppointments.map((apt) => {
             const statusColor = getStatusColor(apt.status);
             const StatusIcon = statusColor.icon;
+            const patient = apt.patientId;
+            const isPast = isAppointmentPast(apt.appointmentDate, apt.appointmentTime);
+            const canMarkComplete = isPast && (apt.status === 'confirmed' || apt.status === 'pending');
 
             return (
               <div
-                key={apt.id}
+                key={apt._id}
                 className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 group"
               >
                 <div className="flex items-start justify-between mb-4">
@@ -398,9 +507,9 @@ const DoctorAppointmentsPage = () => {
                     }}
                   >
                     <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
-                      {apt.patient}
+                      {patient?.name || 'Unknown Patient'}
                     </h3>
-                    <p className="text-sm text-zinc-400 mt-1">{apt.reason}</p>
+                    <p className="text-sm text-zinc-400 mt-1">{apt.reasonForVisit || 'General Consultation'}</p>
                   </div>
                   <div
                     className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold border ${
@@ -415,19 +524,18 @@ const DoctorAppointmentsPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
                   <div className="flex items-center gap-2 text-zinc-400">
                     <Calendar className="w-4 h-4 text-blue-400" />
-                    {new Date(apt.date).toLocaleDateString()}
+                    {new Date(apt.appointmentDate).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-2 text-zinc-400">
                     <Clock className="w-4 h-4 text-green-400" />
-                    {apt.time}
+                    {apt.appointmentTime}
                   </div>
                   <div className="flex items-center gap-2 text-zinc-400">
                     <Phone className="w-4 h-4 text-orange-400" />
-                    {apt.phone}
+                    {patient?.phone || 'N/A'}
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <User className="w-4 h-4 text-cyan-400" />
-                    {apt.type}
+                  <div className="flex items-center gap-2 text-zinc-400 capitalize">
+                    {apt.consultationMode === 'online' ? '📱' : '🏥'} {apt.consultationMode}
                   </div>
                 </div>
 
@@ -435,14 +543,18 @@ const DoctorAppointmentsPage = () => {
                   {apt.status === 'pending' && (
                     <>
                       <button
-                        onClick={() => handleConfirmClick(apt)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        onClick={() => handleConfirmAppointment(apt)}
+                        disabled={actionLoading}
+                        className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Confirm
                       </button>
                       <button
-                        onClick={() => handleRejectClick(apt)}
+                        onClick={() => {
+                          setSelectedAppointment(apt);
+                          setShowRejectModal(true);
+                        }}
                         className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 py-2 rounded-lg text-sm font-medium transition-colors"
                       >
                         Reject
@@ -450,10 +562,14 @@ const DoctorAppointmentsPage = () => {
                     </>
                   )}
 
-                  {apt.status === 'confirmed' && (
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                      <MessageSquare className="w-4 h-4" />
-                      Start Consultation
+                  {canMarkComplete && (
+                    <button
+                      onClick={() => handleMarkComplete(apt)}
+                      disabled={actionLoading}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark Complete
                     </button>
                   )}
 
@@ -462,7 +578,7 @@ const DoctorAppointmentsPage = () => {
                       setSelectedAppointment(apt);
                       setShowModal(true);
                     }}
-                    className="text-purple-400 hover:text-purple-300 font-semibold text-sm flex items-center gap-1 transition-colors"
+                    className="text-purple-400 hover:text-purple-300 font-semibold text-sm flex items-center gap-1 transition-colors px-4"
                   >
                     View <ArrowRight className="w-3 h-3" />
                   </button>
@@ -483,66 +599,17 @@ const DoctorAppointmentsPage = () => {
         </div>
       )}
 
-      {/* Confirm Modal */}
+      {/* Modals */}
       {showModal && selectedAppointment && (
         <AppointmentModal
           appointment={selectedAppointment}
           onClose={() => {
             setShowModal(false);
             setSelectedAppointment(null);
-            setNotes('');
+            setShowRejectModal(false);
+            setRejectionReason('');
           }}
         />
-      )}
-
-      {/* Reject Modal */}
-      {showRejectModal && selectedAppointment && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Reject Appointment?</h3>
-            <p className="text-zinc-400 mb-4">
-              Are you sure you want to reject this appointment with {selectedAppointment.patient}?
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-white mb-2">
-                Reason for Rejection (Optional)
-              </label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Tell the patient why you're rejecting..."
-                className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 resize-none h-20"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowRejectModal(false)}
-                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
-              >
-                Keep Appointment
-              </button>
-              <button
-                onClick={handleRejectAppointment}
-                disabled={confirming}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                {confirming ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Rejecting...
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4" />
-                    Yes, Reject
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
