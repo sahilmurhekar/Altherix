@@ -1,6 +1,6 @@
 // /frontend/src/pages/doctor/ProfilePage.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -12,28 +12,114 @@ import {
   AlertCircle,
   Check,
   Camera,
-  Clock
+  Clock,
+  Loader
 } from 'lucide-react';
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+const API_URL = `${SERVER_URL}/api`;
+
 const DoctorProfilePage = () => {
+  const token = localStorage.getItem('token');
   const [formData, setFormData] = useState({
-    name: 'Dr. Anderson Smith',
-    email: 'doctor@example.com',
-    phone: '9876543210',
-    specialization: 'Cardiology',
-    licenseNumber: 'MED123456',
-    experience: '10',
-    qualifications: 'MBBS, MD, DM Cardiology',
-    clinicAddress: '123 Medical Plaza, Mumbai',
-    city: 'Mumbai',
-    bio: 'Experienced cardiologist with a passion for patient care'
+    name: '',
+    email: '',
+    phone: '',
+    specialization: '',
+    licenseNumber: '',
+    experience: '',
+    qualifications: '',
+    clinicAddress: '',
+    city: '',
+    bio: '',
+    // --- ADDED LOCATION FIELDS ---
+    address: '',
+    latitude: '',
+    longitude: '',
+    clinicLatitude: '',
+    clinicLongitude: ''
   });
 
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [previewPic, setPreviewPic] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Fetch profile on mount
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.user) {
+        setFormData({
+          name: data.user.name || '',
+          email: data.user.email || '',
+          phone: data.user.phone || '',
+          specialization: data.user.specialization || '',
+          licenseNumber: data.user.licenseNumber || '',
+          experience: data.user.experience || '', // <-- FIX 3: Removed String()
+          qualifications: data.user.qualifications || '',
+          city: data.user.city || '',
+          bio: data.user.bio || '',
+          // --- FIX 2: READ FROM NESTED OBJECTS ---
+          address: data.user.location?.address || '',
+          latitude: data.user.location?.coordinates?.[1] || '',
+          longitude: data.user.location?.coordinates?.[0] || '',
+          clinicAddress: data.user.clinicLocation?.address || data.user.clinicAddress || '',
+          clinicLatitude: data.user.clinicLocation?.coordinates?.[1] || '',
+          clinicLongitude: data.user.clinicLocation?.coordinates?.[0] || ''
+        });
+        setProfilePicture(data.user.profilePicture);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setMessage({ type: 'error', text: 'Failed to load profile' });
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreviewPic(URL.createObjectURL(file));
+      handleUploadPicture(file);
+    }
+  };
+
+  const handleUploadPicture = async (file) => {
+    setUploading(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('profilePicture', file);
+
+      const res = await fetch(`${API_URL}/auth/profile/upload-picture`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataToSend
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setProfilePicture(data.profilePicture);
+        setMessage({ type: 'success', text: 'Profile picture updated!' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Upload failed' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Upload failed' });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -41,12 +127,24 @@ const DoctorProfilePage = () => {
     setLoading(true);
 
     try {
-      setTimeout(() => {
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await res.json();
+      if (res.ok) {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
-        setLoading(false);
-      }, 1000);
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Update failed' });
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Failed to update profile' });
+    } finally {
       setLoading(false);
     }
   };
@@ -82,14 +180,30 @@ const DoctorProfilePage = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Profile Picture */}
         <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 text-center">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 mb-4 relative group">
-            <User className="w-12 h-12 text-white" />
-            <button
-              type="button"
-              className="absolute bottom-0 right-0 p-2 bg-zinc-900 border border-cyan-500/50 rounded-full hover:bg-zinc-800 transition-colors"
-            >
-              <Camera className="w-4 h-4 text-cyan-400" />
-            </button>
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 mb-4 relative group overflow-hidden">
+            {profilePicture || previewPic ? (
+              <img
+                src={previewPic || profilePicture}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-12 h-12 text-white" />
+            )}
+            <label className="absolute bottom-0 right-0 p-2 bg-zinc-900 border border-cyan-500/50 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer">
+              {uploading ? (
+                <Loader className="w-4 h-4 text-cyan-400 animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-cyan-400" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePictureChange}
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
           </div>
           <p className="text-sm text-zinc-400">Click camera icon to change photo</p>
         </div>
@@ -122,8 +236,8 @@ const DoctorProfilePage = () => {
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleChange}
-                  className="w-full bg-transparent outline-none text-white"
+                  disabled
+                  className="w-full bg-transparent outline-none text-white opacity-60 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -157,6 +271,55 @@ const DoctorProfilePage = () => {
                 />
               </div>
             </div>
+
+            {/* --- ADDED FIELDS --- */}
+            {/* Personal Address */}
+            <div>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Personal Address</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+
+            {/* Personal Latitude */}
+            <div>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Personal Latitude</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="number"
+                  name="latitude"
+                  value={formData.latitude}
+                  onChange={handleChange}
+                  placeholder="e.g., 12.9716"
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+
+            {/* Personal Longitude */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Personal Longitude</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="number"
+                  name="longitude"
+                  value={formData.longitude}
+                  onChange={handleChange}
+                  placeholder="e.g., 77.5946"
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+            {/* --- END ADDED FIELDS --- */}
           </div>
         </div>
 
@@ -238,6 +401,41 @@ const DoctorProfilePage = () => {
               />
             </div>
           </div>
+
+          {/* --- ADDED FIELDS --- */}
+          {/* Clinic Lat/Lng */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Latitude</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="number"
+                  name="clinicLatitude"
+                  value={formData.clinicLatitude}
+                  onChange={handleChange}
+                  placeholder="e.g., 12.9716"
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Longitude</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="number"
+                  name="clinicLongitude"
+                  value={formData.clinicLongitude}
+                  onChange={handleChange}
+                  placeholder="e.g., 77.5946"
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+          </div>
+          {/* --- END ADDED FIELDS --- */}
+
 
           {/* Bio */}
           <div className="mt-6">

@@ -1,4 +1,5 @@
 // ============ models/User.js ============
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -8,6 +9,12 @@ const userSchema = new mongoose.Schema({
   password: String,
   phone: String,
   userType: { type: String, enum: ['patient', 'doctor'], required: true },
+
+  // Profile picture
+  profilePicture: {
+    type: String,
+    default: null
+  },
 
   // Location fields (for all users)
   location: {
@@ -32,7 +39,11 @@ const userSchema = new mongoose.Schema({
   specialization: String,
   licenseNumber: String,
   experience: String,
+  qualifications: String,
   clinicAddress: String,
+  city: String,
+  bio: String,
+
   clinicLocation: {
     type: {
       type: String,
@@ -45,6 +56,7 @@ const userSchema = new mongoose.Schema({
     },
     address: String
   },
+
   consultationFee: Number,
 
   // Doctor ratings
@@ -54,6 +66,7 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 5
   },
+
   reviews: {
     type: Number,
     default: 0
