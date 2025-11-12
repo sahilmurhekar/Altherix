@@ -6,6 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointment.js';
+import medicalRecordsRoutes from './routes/medicalRecords.js';
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ const connectDB = async () => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/medical-records', medicalRecordsRoutes);
 
 // --- DEBUG STEP 3: Global Error Handler ---
 // This will catch any unhandled errors from your routes

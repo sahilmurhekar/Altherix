@@ -1,415 +1,651 @@
-// /frontend/src/pages/doctor/MedicalRecordsPage.jsx
+// /frontend/src/pages/doctor/DoctorMedicalRecordsPage.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FileText,
-  Download,
-  Upload,
+  Search,
+  FileUp,
   Loader,
   AlertCircle,
-  Shield,
-  Calendar,
-  User,
-  Lock,
-  X,
-  Plus,
-  BarChart3,
-  Pill,
+  CheckCircle,
+  XCircle,
+  Download,
   Eye,
-  Share2
+  ExternalLink,
+  ChevronDown,
+  User,
+  Calendar,
+  Stethoscope,
+  Upload,
+  X
 } from 'lucide-react';
 
 const DoctorMedicalRecordsPage = () => {
-  const [records, setRecords] = useState({
-    medical: [],
-    analysis: [],
-    prescriptions: []
-  });
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('medical');
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  // ========== STATE MANAGEMENT ==========
+
+  // Search section
+  const [searchInput, setSearchInput] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Selected patient
+  const [selectedPatient, setSelectedPatient] = useState(null);
+
+  // Upload section
   const [uploadData, setUploadData] = useState({
-    patient: '',
-    type: 'medical',
+    type: 'test-analysis',
     description: '',
     file: null
   });
-  const [uploading, setUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(null);
+  const [blockchainStatus, setBlockchainStatus] = useState(null); // Track blockchain status
 
-  useEffect(() => {
-    setTimeout(() => {
-      setRecords({
-        medical: [
-          {
-            id: 1,
-            patient: 'Rajesh Singh',
-            name: 'Blood Test Report',
-            type: 'diagnostic',
-            uploadedDate: '2024-03-15',
-            description: 'Complete blood count and biochemistry report',
-            blockchainHash: '0x7f...8c9a',
-            verified: true,
-            file: 'blood_test_15_03_2024.pdf'
-          },
-          {
-            id: 2,
-            patient: 'Priya Sharma',
-            name: 'ECG Report',
-            type: 'diagnostic',
-            uploadedDate: '2024-03-10',
-            description: 'Electrocardiogram report',
-            blockchainHash: '0x9d...2e5b',
-            verified: true,
-            file: 'ecg_report_10_03_2024.pdf'
-          }
-        ],
-        analysis: [
-          {
-            id: 3,
-            patient: 'Amit Patel',
-            name: 'AI Analysis - Blood Report',
-            type: 'analysis',
-            uploadedDate: '2024-03-16',
-            description: 'Automated analysis and key findings from blood test',
-            blockchainHash: '0x3c...7f4d',
-            verified: true,
-            findings: ['Hemoglobin slightly low', 'Glucose levels normal'],
-            riskFactors: ['Anemia risk'],
-            recommendations: ['Iron supplement recommended', 'Increase iron-rich food']
-          }
-        ],
-        prescriptions: [
-          {
-            id: 4,
-            patient: 'Neha Sharma',
-            name: 'Prescription - Cardiology Checkup',
-            type: 'prescription',
-            uploadedDate: '2024-03-15',
-            description: 'Medications and health recommendations',
-            blockchainHash: '0x5b...9e1c',
-            verified: true,
-            medicines: [
-              { name: 'Aspirin', dosage: '75mg', frequency: 'Once daily', duration: '30 days' },
-              { name: 'Lisinopril', dosage: '5mg', frequency: 'Once daily', duration: '60 days' }
-            ],
-            expiryDate: '2024-06-15'
-          }
-        ]
-      });
-      setLoading(false);
-    }, 500);
-  }, []);
+  // Polling for blockchain confirmation
+  const [isPolling, setIsPolling] = useState(false);
+  const [recordIdToCheck, setRecordIdToCheck] = useState(null);
+  const [blockchainDetails, setBlockchainDetails] = useState(null);
 
-  const patients = ['Rajesh Singh', 'Priya Sharma', 'Amit Patel', 'Neha Sharma'];
+  // ========== API BASE URL ==========
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+  const API_BASE_URL = `${SERVER_URL}/api`;
+  const getToken = () => localStorage.getItem('token');
 
-  const recordTypes = {
-    medical: { label: 'Medical Reports', icon: FileText, color: 'text-blue-400' },
-    analysis: { label: 'AI Analysis', icon: BarChart3, color: 'text-purple-400' },
-    prescriptions: { label: 'Prescriptions', icon: Pill, color: 'text-red-400' }
-  };
-
-  const currentRecords = records[activeTab] || [];
-
-  const handleUpload = async () => {
-    if (!uploadData.patient || !uploadData.type || !uploadData.file) {
-      alert('Please fill all fields and select a file');
+  // ========== SEARCH PATIENTS ==========
+  const handleSearch = useCallback(async () => {
+    if (!searchInput.trim()) {
+      setSearchError('Please enter a patient name or ID');
       return;
     }
 
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchResults([]);
+    setHasSearched(true);
+
     try {
-      setUploading(true);
-      // Simulate API call
-      setTimeout(() => {
-        const newRecord = {
-          id: Math.max(...Object.values(records).flat().map(r => r.id), 0) + 1,
-          patient: uploadData.patient,
-          name: uploadData.file.name,
-          type: uploadData.type,
-          uploadedDate: new Date().toISOString().split('T')[0],
-          description: uploadData.description,
-          blockchainHash: '0x' + Math.random().toString(16).slice(2, 10),
-          verified: false
-        };
+      const params = new URLSearchParams();
 
-        setRecords(prev => ({
-          ...prev,
-          [uploadData.type]: [...prev[uploadData.type], newRecord]
-        }));
+      // Check if input looks like MongoDB ID (24 hex characters)
+      if (/^[a-f0-9]{24}$/i.test(searchInput)) {
+        params.append('patientId', searchInput);
+      } else {
+        params.append('patientName', searchInput);
+      }
 
-        setShowUploadModal(false);
-        setUploadData({ patient: '', type: 'medical', description: '', file: null });
-        setUploading(false);
-        alert('Record uploaded successfully!');
-      }, 1000);
+      const response = await fetch(
+        `${API_BASE_URL}/medical-records/search-patients?${params}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to search patients');
+      }
+
+      const data = await response.json();
+      setSearchResults(data.patients || []);
+
+      if (data.patients.length === 0) {
+        setSearchError('No patients found. Make sure you have appointments with them.');
+      }
     } catch (err) {
-      console.error('Upload error:', err);
-      alert('Failed to upload record');
-      setUploading(false);
+      console.error('Search error:', err);
+      setSearchError(err.message || 'Failed to search patients');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [searchInput, API_BASE_URL]);
+
+  // Handle Enter key in search
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
-  const RecordCard = ({ record }) => (
-    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 group">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <FileText className="w-5 h-5 text-blue-400" />
-            <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
-              {record.name}
-            </h3>
-          </div>
-          <p className="text-sm text-zinc-400">{record.description}</p>
+  // ========== SELECT PATIENT ==========
+  const handleSelectPatient = (patient) => {
+    setSelectedPatient(patient);
+    setUploadError(null);
+    setUploadSuccess(null);
+  };
+
+  // ========== DESELECT PATIENT & RESET ==========
+  const handleResetSearch = () => {
+    setSelectedPatient(null);
+    setSearchInput('');
+    setSearchResults([]);
+    setHasSearched(false);
+    setUploadData({ type: 'test-analysis', description: '', file: null });
+    setUploadError(null);
+    setUploadSuccess(null);
+    setBlockchainStatus(null);
+    setBlockchainDetails(null);
+  };
+
+  // ========== HANDLE FILE UPLOAD ==========
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('File size exceeds 5MB limit');
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg', 'image/png'];
+
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError('Only PDF, DOC, DOCX, JPG, PNG files allowed');
+        return;
+      }
+
+      setUploadData(prev => ({ ...prev, file }));
+      setUploadError(null);
+    }
+  };
+
+  // ========== UPLOAD MEDICAL RECORD ==========
+  const handleUpload = async () => {
+    // Validation
+    if (!selectedPatient) {
+      setUploadError('Please select a patient');
+      return;
+    }
+
+    if (!uploadData.type) {
+      setUploadError('Please select a document type');
+      return;
+    }
+
+    if (!uploadData.file) {
+      setUploadError('Please select a file');
+      return;
+    }
+
+    if (!uploadData.description.trim()) {
+      setUploadError('Please provide a description');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+    setBlockchainStatus(null);
+
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append('patientId', selectedPatient._id);
+      formData.append('type', uploadData.type);
+      formData.append('description', uploadData.description);
+      formData.append('file', uploadData.file);
+
+      // Upload
+      const response = await fetch(
+        `${API_BASE_URL}/medical-records/upload`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: formData
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      const data = await response.json();
+
+      // Success!
+      setUploadSuccess({
+        message: data.message,
+        record: data.record
+      });
+
+      // Start polling for blockchain confirmation
+      setRecordIdToCheck(data.record.id);
+      setBlockchainStatus('pending');
+
+      // Reset form
+      setUploadData({ type: 'test-analysis', description: '', file: null });
+
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadError(err.message || 'Failed to upload record');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // ========== POLL BLOCKCHAIN STATUS ==========
+  useEffect(() => {
+    if (!recordIdToCheck || !blockchainStatus) return;
+
+    const pollBlockchain = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/medical-records/blockchain/status?recordId=${recordIdToCheck}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${getToken()}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to check status');
+
+        const data = await response.json();
+
+        if (data.status === 'confirmed') {
+          setBlockchainStatus('confirmed');
+          setBlockchainDetails(data);
+          setIsPolling(false); // Stop polling
+        } else if (data.status === 'failed') {
+          setBlockchainStatus('failed');
+          setIsPolling(false);
+        }
+        // If still pending, keep polling
+      } catch (err) {
+        console.error('Blockchain check error:', err);
+      }
+    };
+
+    // Poll every 3 seconds
+    if (blockchainStatus === 'pending') {
+      setIsPolling(true);
+      const interval = setInterval(pollBlockchain, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [recordIdToCheck, blockchainStatus, API_BASE_URL, getToken]);
+
+  // ========== RENDER FUNCTIONS ==========
+
+  // Render search results
+  const renderSearchResults = () => {
+    if (selectedPatient) return null;
+
+    if (!hasSearched) return null;
+
+    if (isSearching) {
+      return (
+        <div className="mt-6 bg-zinc-900/50 border border-zinc-700 rounded-xl p-8 text-center">
+          <Loader className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-3" />
+          <p className="text-zinc-400">Searching for patients...</p>
         </div>
-        {record.verified && (
-          <div className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30 flex items-center gap-1">
-            <Shield className="w-3 h-3" />
-            Verified
+      );
+    }
+
+    if (searchError) {
+      return (
+        <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-xl p-6">
+          <div className="flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-red-400">{searchError}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (searchResults.length === 0) {
+      return (
+        <div className="mt-6 bg-amber-500/10 border border-amber-500/30 rounded-xl p-6">
+          <div className="flex gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-amber-400 font-semibold">No results found</p>
+              <p className="text-amber-300/80 text-sm mt-1">
+                Make sure you have appointments with this patient
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-6 space-y-3">
+        {searchResults.map((patient) => (
+          <div
+            key={patient._id}
+            className="bg-zinc-900/50 border border-zinc-700 rounded-lg p-4 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="w-4 h-4 text-cyan-400" />
+                  <h3 className="font-semibold text-white group-hover:text-purple-400 transition-colors">
+                    {patient.name}
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs text-zinc-400 mt-2">
+                  <div>
+                    📧 {patient.email}
+                  </div>
+                  <div>
+                    📱 {patient.phone}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    Last: {patient.lastAppointmentDate || 'N/A'}
+                  </div>
+                  <div>
+                    Total Appointments: {patient.appointmentCount}
+                  </div>
+                </div>
+                {patient.bloodType && (
+                  <div className="text-xs text-zinc-400 mt-2">
+                    🩸 Blood Type: {patient.bloodType}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => handleSelectPatient(patient)}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex-shrink-0 ml-4"
+              >
+                Select
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Render upload section (only visible when patient selected)
+  const renderUploadSection = () => {
+    if (!selectedPatient) return null;
+
+    return (
+      <div className="mt-8 space-y-6">
+        {/* Selected Patient Info */}
+        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center">
+                <User className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-400">Selected Patient</p>
+                <p className="text-lg font-bold text-white">{selectedPatient.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleResetSearch}
+              className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-sm transition-colors"
+            >
+              Change Patient
+            </button>
+          </div>
+        </div>
+
+        {/* Upload Form */}
+        <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 space-y-6">
+          <h3 className="text-lg font-bold text-white">Upload Medical Record</h3>
+
+          {/* Document Type */}
+          <div>
+            <label className="block text-sm font-semibold text-zinc-300 mb-3">
+              Document Type
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { value: 'test-analysis', label: 'Medical Test Analysis', desc: 'Lab reports, diagnostic results' },
+                { value: 'doctor-analysis', label: 'Doctor Analysis', desc: 'Clinical assessment, notes' }
+              ].map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setUploadData(prev => ({ ...prev, type: option.value }))}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    uploadData.type === option.value
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-600'
+                  }`}
+                >
+                  <p className="font-semibold text-white">{option.label}</p>
+                  <p className="text-xs text-zinc-400 mt-1">{option.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-semibold text-zinc-300 mb-2">
+              Description
+            </label>
+            <textarea
+              value={uploadData.description}
+              onChange={(e) => setUploadData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Enter a brief description of this document..."
+              className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-purple-500/50 outline-none transition-colors resize-none h-24"
+            />
+          </div>
+
+          {/* File Upload */}
+          <div>
+            <label className="block text-sm font-semibold text-zinc-300 mb-2">
+              Select File
+            </label>
+            <div className="border-2 border-dashed border-zinc-700 rounded-lg p-8 text-center hover:border-purple-500/50 transition-colors group cursor-pointer">
+              <input
+                type="file"
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                className="hidden"
+                id="file-input"
+              />
+              <label htmlFor="file-input" className="cursor-pointer">
+                <Upload className="w-8 h-8 text-zinc-400 group-hover:text-purple-400 transition-colors mx-auto mb-2" />
+                <p className="text-sm font-medium text-zinc-300">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  PDF, DOC, DOCX, JPG, PNG up to 5MB
+                </p>
+              </label>
+            </div>
+            {uploadData.file && (
+              <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-green-400">✓ {uploadData.file.name}</span>
+                <button
+                  onClick={() => setUploadData(prev => ({ ...prev, file: null }))}
+                  className="text-zinc-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Upload Button */}
+          <button
+            onClick={handleUpload}
+            disabled={isUploading || !uploadData.file || !uploadData.description}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2"
+          >
+            {isUploading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Upload Record
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {uploadError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex gap-3">
+            <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-red-400 text-sm">{uploadError}</p>
+          </div>
+        )}
+
+        {/* Success Message with Blockchain Status */}
+        {uploadSuccess && (
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 space-y-4">
+            <div className="flex gap-3">
+              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-green-400 font-semibold">{uploadSuccess.message}</p>
+                <p className="text-green-400/80 text-sm mt-1">
+                  File: {uploadSuccess.record.fileName}
+                </p>
+              </div>
+            </div>
+
+            {/* Blockchain Status */}
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <p className="text-sm font-semibold text-blue-400 mb-3">🔗 Blockchain Status</p>
+
+              {blockchainStatus === 'pending' && (
+                <div className="flex items-center gap-2">
+                  <Loader className="w-4 h-4 text-blue-400 animate-spin" />
+                  <p className="text-blue-400 text-sm">
+                    Storing on Sepolia blockchain... (auto-updating)
+                  </p>
+                </div>
+              )}
+
+              {blockchainStatus === 'confirmed' && blockchainDetails && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <p className="text-green-400 text-sm font-semibold">
+                      ✓ Successfully stored on blockchain!
+                    </p>
+                  </div>
+                  <div className="mt-3 space-y-2 text-xs text-zinc-300">
+                    <div>
+                      <span className="text-zinc-400">Transaction Hash:</span>
+                      <p className="font-mono text-blue-400 break-all">
+                        {blockchainDetails.transaction.hash}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-zinc-400">Block Number:</span>
+                      <p className="text-white">{blockchainDetails.transaction.blockNumber}</p>
+                    </div>
+                    <div>
+                      <span className="text-zinc-400">Gas Used:</span>
+                      <p className="text-white">{blockchainDetails.transaction.gasUsed}</p>
+                    </div>
+                    <div>
+                      <span className="text-zinc-400">Transaction Fee:</span>
+                      <p className="text-white">{blockchainDetails.transaction.transactionFee} ETH</p>
+                    </div>
+                  </div>
+                  <a
+                    href={blockchainDetails.explorerLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 rounded-lg text-sm transition-colors border border-blue-500/30"
+                  >
+                    View on Etherscan
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+
+              {blockchainStatus === 'failed' && (
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-red-400" />
+                  <p className="text-red-400 text-sm">
+                    Failed to store on blockchain. File is still saved locally.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Upload Another or Change Patient */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setUploadSuccess(null);
+                  setBlockchainStatus(null);
+                }}
+                className="flex-1 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 hover:text-purple-300 rounded-lg text-sm font-medium transition-colors border border-purple-500/30"
+              >
+                Upload Another Record
+              </button>
+              <button
+                onClick={handleResetSearch}
+                className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Change Patient
+              </button>
+            </div>
           </div>
         )}
       </div>
-
-      <div className="grid grid-cols-2 gap-3 text-xs mb-4">
-        <div className="flex items-center gap-2 text-zinc-400">
-          <Calendar className="w-4 h-4 text-cyan-400" />
-          {new Date(record.uploadedDate).toLocaleDateString()}
-        </div>
-        <div className="flex items-center gap-2 text-zinc-400">
-          <User className="w-4 h-4 text-orange-400" />
-          {record.patient}
-        </div>
-      </div>
-
-      {/* AI Analysis Specific */}
-      {record.type === 'analysis' && record.findings && (
-        <div className="bg-zinc-800/30 rounded-lg p-3 mb-4 space-y-2">
-          <p className="text-xs font-semibold text-purple-400">Key Findings:</p>
-          <ul className="text-xs text-zinc-300 space-y-1">
-            {record.findings.map((finding, idx) => (
-              <li key={idx}>• {finding}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Prescriptions Specific */}
-      {record.type === 'prescription' && record.medicines && (
-        <div className="bg-zinc-800/30 rounded-lg p-3 mb-4 space-y-2">
-          <p className="text-xs font-semibold text-red-400">Medicines:</p>
-          <div className="space-y-1 text-xs text-zinc-300">
-            {record.medicines.map((med, idx) => (
-              <div key={idx} className="flex justify-between">
-                <span>{med.name} - {med.dosage}</span>
-                <span className="text-zinc-500">{med.frequency}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Blockchain Info */}
-      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
-        <Lock className="w-4 h-4 text-blue-400 flex-shrink-0" />
-        <div className="min-w-0">
-          <p className="text-xs text-blue-400 font-semibold">Blockchain Hash</p>
-          <p className="text-xs text-zinc-400 truncate font-mono">{record.blockchainHash}</p>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-2">
-        <button className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-blue-500/30">
-          <Eye className="w-4 h-4" />
-          View
-        </button>
-        <button className="flex-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-green-500/30">
-          <Download className="w-4 h-4" />
-          Download
-        </button>
-        <button className="flex-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 hover:text-purple-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-purple-500/30">
-          <Share2 className="w-4 h-4" />
-          Share
-        </button>
-      </div>
-    </div>
-  );
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader className="w-8 h-8 text-purple-400 animate-spin" />
-      </div>
     );
-  }
+  };
+
+  // ========== MAIN RENDER ==========
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-6 md:p-8">
-        <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">
-          Medical Records
+      <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-2xl p-6 md:p-8">
+        <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+          Attach Medical Records
         </h1>
-        <p className="text-zinc-400">Upload and manage patient medical documents</p>
+        <p className="text-zinc-400">
+          Upload medical documents for your patients with blockchain verification
+        </p>
       </div>
 
-      {/* Upload Button */}
-      <button
-        onClick={() => setShowUploadModal(true)}
-        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 flex items-center gap-2"
-      >
-        <Upload className="w-5 h-5" />
-        Upload New Record
-      </button>
+      {/* Search Section */}
+      <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6 space-y-4">
+        <h2 className="text-xl font-bold text-white">Find Patient</h2>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-zinc-700 overflow-x-auto">
-        {Object.entries(recordTypes).map(([key, { label, icon: Icon }]) => (
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            placeholder="Enter patient name or ID..."
+            className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-blue-500/50 outline-none transition-colors"
+          />
           <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={`px-4 py-3 font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
-              activeTab === key
-                ? 'border-purple-500 text-purple-400'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
+            onClick={handleSearch}
+            disabled={isSearching}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
           >
-            <Icon className="w-4 h-4" />
-            {label} ({currentRecords.length})
+            <Search className="w-4 h-4" />
+            {isSearching ? 'Searching...' : 'Search'}
           </button>
-        ))}
+        </div>
+
+        {/* Search Results */}
+        {renderSearchResults()}
       </div>
 
-      {/* Records Grid */}
-      {currentRecords.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {currentRecords.map((record) => (
-            <RecordCard key={record.id} record={record} />
-          ))}
-        </div>
-      ) : (
-        <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-12 text-center">
-          <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-white mb-2">No records found</p>
-          <p className="text-zinc-400">Upload your first medical record to get started</p>
-        </div>
-      )}
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center justify-between">
-              <span>Upload Medical Record</span>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="text-zinc-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </h2>
-
-            <div className="space-y-4">
-              {/* Patient Selection */}
-              <div>
-                <label className="block text-sm font-semibold text-zinc-300 mb-2">
-                  Select Patient
-                </label>
-                <select
-                  value={uploadData.patient}
-                  onChange={(e) => setUploadData({ ...uploadData, patient: e.target.value })}
-                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:border-green-500/50 outline-none transition-colors"
-                >
-                  <option value="">Choose patient...</option>
-                  {patients.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Record Type */}
-              <div>
-                <label className="block text-sm font-semibold text-zinc-300 mb-2">
-                  Record Type
-                </label>
-                <select
-                  value={uploadData.type}
-                  onChange={(e) => setUploadData({ ...uploadData, type: e.target.value })}
-                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white text-sm focus:border-green-500/50 outline-none transition-colors"
-                >
-                  <option value="medical">Medical Report</option>
-                  <option value="analysis">Analysis Report</option>
-                  <option value="prescriptions">Prescription</option>
-                </select>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-semibold text-zinc-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={uploadData.description}
-                  onChange={(e) =>
-                    setUploadData({ ...uploadData, description: e.target.value })
-                  }
-                  placeholder="Enter description..."
-                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:border-green-500/50 outline-none transition-colors resize-none h-20"
-                />
-              </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm font-semibold text-zinc-300 mb-2">
-                  Upload File
-                </label>
-                <div className="border-2 border-dashed border-zinc-700 rounded-lg p-6 text-center hover:border-green-500/50 transition-colors cursor-pointer group">
-                  <Upload className="w-8 h-8 text-zinc-400 group-hover:text-green-400 transition-colors mx-auto mb-2" />
-                  <p className="text-sm text-zinc-400">Click to upload or drag and drop</p>
-                  <p className="text-xs text-zinc-500 mt-1">PDF, DOC, JPG up to 5MB</p>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) =>
-                      setUploadData({ ...uploadData, file: e.target.files?.[0] || null })
-                    }
-                  />
-                </div>
-                {uploadData.file && (
-                  <p className="text-xs text-green-400 mt-2">✓ {uploadData.file.name}</p>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  {uploading ? (
-                    <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Upload
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Upload Section */}
+      {renderUploadSection()}
     </div>
   );
 };
