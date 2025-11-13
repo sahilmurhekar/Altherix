@@ -21,7 +21,7 @@ import AppointmentsPage from './pages/patient/AppointmentsPage';
 import MedicalRecordsPage from './pages/patient/MedicalRecordsPage';
 import PrescriptionsPage from './pages/patient/PrescriptionsPage';
 import ProfilePage from './pages/patient/ProfilePage';
-import SettingsPage from './pages/patient/SettingsPage';
+import PatientSettingsPage from './pages/patient/SettingsPage';
 
 // Doctor Dashboard Pages
 import DashboardDoctor from './pages/DashboardDoctor';
@@ -67,7 +67,7 @@ function App() {
             <Route path="medical-records" element={<MedicalRecordsPage />} />
             <Route path="prescriptions" element={<PrescriptionsPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings" element={<PatientSettingsPage />} />
           </Route>
 
           {/* Doctor Dashboard Routes */}

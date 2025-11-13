@@ -118,7 +118,7 @@ const Landing = () => {
             <h3 className='text-sm md:text-md md:w-1/2 lg:w-full lg:text-lg text-center lg:text-left text-zinc-400 hover:text-zinc-200 transition-all duration-300' data-aos="fade-up" data-aos-delay="100">Experience the future of healthcare where your medical records, appointments, and AI-powered health insights are unified under one secure, blockchain-protected platform.</h3>
             <div className='flex flex-col md:flex-row gap-4' data-aos="fade-up" data-aos-delay="200">
               <a href="/login" className="border-none btn bg-blue-500 w-full md:w-auto hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition-all duration-300" data-aos="zoom-in">Get Started</a>
-              <a href="/dashboard" className="border-none btn bg-purple-600 hover:shadow-lg hover:shadow-purple-600/50 hover:scale-105 transition-all duration-300  w-full md:w-auto" data-aos="zoom-in" data-aos-delay="100">Book Appointment</a>
+              <a href="/login" className="border-none btn bg-purple-600 hover:shadow-lg hover:shadow-purple-600/50 hover:scale-105 transition-all duration-300  w-full md:w-auto" data-aos="zoom-in" data-aos-delay="100">Book Appointment</a>
             </div>
           </div>
           <div className='lg:w-3/7 flex justify-center items-center lg:justify-end lg:items-center' data-aos="fade-right">
@@ -252,7 +252,7 @@ const Landing = () => {
                 ))}
               </div>
               <div className='flex justify-center lg:justify-start' data-aos="fade-up" data-aos-delay="500">
-                <a href='/dashboard'><button className="border-none mt-10 btn bg-blue-500 hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition-all duration-300 w-full md:w-auto" data-aos="zoom-in">
+                <a href='/login'><button className="border-none mt-10 btn bg-blue-500 hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition-all duration-300 w-full md:w-auto" data-aos="zoom-in">
                   Start Managing Your Health
                 </button></a>
               </div>

@@ -11,7 +11,8 @@ import {
   getAddressFromCoords,
   getProfile,
   updateProfile,
-  uploadProfilePicture
+  uploadProfilePicture,
+  deleteAccount
 } from '../controllers/authController.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -38,6 +39,7 @@ router.get('/nearby-doctors', getNearbyDoctors);
 router.get('/address-from-coords', getAddressFromCoords);
 
 // New routes for profile
+router.delete('/profile', verifyToken, deleteAccount);
 router.get('/profile', verifyToken, getProfile);
 router.patch('/profile', verifyToken, updateProfile);
 router.post('/profile/upload-picture', verifyToken, upload.single('profilePicture'), uploadProfilePicture);

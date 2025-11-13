@@ -132,16 +132,14 @@ export const getProfile = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
+// UPDATE the existing updateProfile function to handle password updates
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.userId;
     const updates = req.body;
 
-    // 1. Manually construct the $set object
     const updateData = {};
 
-    // 2. Add non-sensitive, top-level fields
     const allowedUpdates = [
       'name', 'phone', 'dateOfBirth', 'bloodType', 'allergies',
       'specialization', 'licenseNumber', 'experience', 'qualifications',
@@ -154,7 +152,7 @@ export const updateProfile = async (req, res) => {
       }
     });
 
-    // 3. Handle nested personal location data
+    // Handle location updates
     if (updates.latitude !== undefined && updates.longitude !== undefined) {
       updateData['location.coordinates'] = [updates.longitude, updates.latitude];
     }
@@ -162,20 +160,39 @@ export const updateProfile = async (req, res) => {
       updateData['location.address'] = updates.address;
     }
 
-    // 4. Handle nested clinic location data (for doctors)
+    // Handle clinic location updates
     if (updates.clinicLatitude !== undefined && updates.clinicLongitude !== undefined) {
       updateData['clinicLocation.coordinates'] = [updates.clinicLongitude, updates.clinicLatitude];
     }
     if (updates.clinicAddress !== undefined) {
       updateData['clinicLocation.address'] = updates.clinicAddress;
-      // Also update the redundant top-level field for consistency
       updateData['clinicAddress'] = updates.clinicAddress;
     }
 
-    // 5. Perform the update
+    // ===== NEW: Handle password updates =====
+    if (updates.password && updates.currentPassword) {
+      // Get user to verify current password
+      const user = await User.findById(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Verify current password
+      const isMatch = await user.comparePassword(updates.currentPassword);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      // Hash new password before setting
+      const bcrypt = await import('bcryptjs');
+      updateData.password = await bcrypt.default.hash(updates.password, 10);
+    }
+    // ========================================
+
     const user = await User.findByIdAndUpdate(
       userId,
-      { $set: updateData }, // Use $set to update nested fields
+      { $set: updateData },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -191,7 +208,23 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-// controllers/authController.js
+
+// ADD THIS NEW FUNCTION - Delete Account
+export const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 export const uploadProfilePicture = async (req, res, next) => { // <-- Can add 'next'
   try {
