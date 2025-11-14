@@ -7,7 +7,7 @@ import Footer from '../components/Footer'
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import emailjs from '@emailjs/browser';
-import { CheckCircle, Shield, Database, Brain, Clock, Lock, Stethoscope, TrendingUp, FileText, Pill, ChevronDown, Twitter, Linkedin, Facebook, Instagram, Mail, Phone, MapPin, ArrowRight, Zap, Eye, AlertCircle, Send, Loader } from 'lucide-react'
+import { X, CheckCircle, Shield, Database, Brain, Clock, Lock, Stethoscope, TrendingUp, FileText, Pill, ChevronDown, Twitter, Linkedin, Facebook, Instagram, Mail, Phone, MapPin, ArrowRight, Zap, Eye, AlertCircle, Send, Loader } from 'lucide-react'
 const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
@@ -435,46 +435,56 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* COMPARISON TABLE SECTION */}
-        <section id='compare' className="py-20 lg:py-28" data-aos="fade-up" data-aos-delay="700">
-          <div className="mb-16 flex flex-col items-center justify-center text-center" data-aos="fade-right">
-            <h2 className="text-3xl lg:w-240 md:text-4xl font-black mb-8" data-aos="fade-up">
-              Why Modern Healthcare on <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Blockchain</span>
-            </h2>
-            <p className="text-sm md:text-lg text-zinc-400 hover:text-zinc-200 transition-all duration-300 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="100">
-              See how we're revolutionizing healthcare delivery with next-generation technology.
-            </p>
-          </div>
+       {/* COMPARISON TABLE SECTION */}
+<section id='compare' className="py-20 lg:py-28" data-aos="fade-up" data-aos-delay="700">
+  <div className="mb-16 flex flex-col items-center justify-center text-center" data-aos="fade-right">
+    <h2 className="text-3xl lg:w-240 md:text-4xl font-black mb-8" data-aos="fade-up">
+      Why Modern Healthcare on <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">Blockchain</span>
+    </h2>
+    <p className="text-sm md:text-lg text-zinc-400 hover:text-zinc-200 transition-all duration-300 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+      See how we're revolutionizing healthcare delivery with next-generation technology.
+    </p>
+  </div>
 
-          <div className="overflow-x-auto" data-aos="zoom-in">
-            <table className="w-full border-collapse text-xs md:text-sm" data-aos="fade-up">
-              <thead>
-                <tr className="border-b border-zinc-700" data-aos="fade-up">
-                  <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-white">Feature</th>
-                  <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-zinc-400">Traditional</th>
-                  <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-blue-400">Our Platform</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { feature: "Medical Records", traditional: "❌ Scattered", ours: "✅ Unified Timeline" },
-                  { feature: "Data Security", traditional: "⚠️ Vulnerable", ours: "✅ Immutable" },
-                  { feature: "AI Insights", traditional: "❌ None", ours: "✅ Personalized" },
-                  { feature: "Prescriptions", traditional: "⚠️ Paper-Based", ours: "✅ Digital & Smart" },
-                  { feature: "Doctor Verification", traditional: "⚠️ Unclear", ours: "✅ Verified" },
-                  { feature: "Data Ownership", traditional: "⚠️ Provider", ours: "✅ Patient-Owned" },
-                  { feature: "Accessibility", traditional: "❌ Limited", ours: "✅ 24/7 Global" }
-                ].map((row, idx) => (
-                  <tr key={idx} className={`border-b border-zinc-800 hover:bg-zinc-900/40 transition-colors duration-200 ${idx % 2 === 0 ? 'bg-zinc-900/20' : 'bg-zinc-900/10'}`} data-aos="fade-up" data-aos-delay={`${idx * 50}`}>
-                    <td className="py-3 px-2 md:py-4 md:px-4 font-semibold text-white">{row.feature}</td>
-                    <td className="py-3 px-2 md:py-4 md:px-4 text-zinc-400">{row.traditional}</td>
-                    <td className="py-3 px-2 md:py-4 md:px-4 text-green-400">{row.ours}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+  <div className="overflow-x-auto" data-aos="zoom-in">
+    <table className="w-full border-collapse text-xs md:text-sm" data-aos="fade-up">
+      <thead>
+        <tr className="border-b border-zinc-700" data-aos="fade-up">
+          <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-white">Feature</th>
+          <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-zinc-400">Traditional</th>
+          <th className="text-left py-3 px-2 md:py-4 md:px-4 font-bold text-blue-400">Our Platform</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          { feature: "Medical Records", traditional: { icon: X, text: "Scattered", color: "text-red-400" }, ours: { icon: CheckCircle, text: "Unified Timeline", color: "text-green-400" } },
+          { feature: "Data Security", traditional: { icon: AlertCircle, text: "Vulnerable", color: "text-yellow-400" }, ours: { icon: CheckCircle, text: "Immutable", color: "text-green-400" } },
+          { feature: "AI Insights", traditional: { icon: X, text: "None", color: "text-red-400" }, ours: { icon: CheckCircle, text: "Personalized", color: "text-green-400" } },
+          { feature: "Prescriptions", traditional: { icon: AlertCircle, text: "Paper-Based", color: "text-yellow-400" }, ours: { icon: CheckCircle, text: "Digital & Smart", color: "text-green-400" } },
+          { feature: "Doctor Verification", traditional: { icon: AlertCircle, text: "Unclear", color: "text-yellow-400" }, ours: { icon: CheckCircle, text: "Verified", color: "text-green-400" } },
+          { feature: "Data Ownership", traditional: { icon: AlertCircle, text: "Provider", color: "text-yellow-400" }, ours: { icon: CheckCircle, text: "Patient-Owned", color: "text-green-400" } },
+          { feature: "Accessibility", traditional: { icon: X, text: "Limited", color: "text-red-400" }, ours: { icon: CheckCircle, text: "24/7 Global", color: "text-green-400" } }
+        ].map((row, idx) => (
+          <tr key={idx} className={`border-b border-zinc-800 hover:bg-zinc-900/40 transition-colors duration-200 ${idx % 2 === 0 ? 'bg-zinc-900/20' : 'bg-zinc-900/10'}`} data-aos="fade-up" data-aos-delay={`${idx * 50}`}>
+            <td className="py-3 px-2 md:py-4 md:px-4 font-semibold text-white">{row.feature}</td>
+            <td className="py-3 px-2 md:py-4 md:px-4">
+              <div className="flex items-center gap-2">
+                <row.traditional.icon className={`w-4 h-4 flex-shrink-0 ${row.traditional.color}`} />
+                <span className={row.traditional.color}>{row.traditional.text}</span>
+              </div>
+            </td>
+            <td className="py-3 px-2 md:py-4 md:px-4">
+              <div className="flex items-center gap-2">
+                <row.ours.icon className={`w-4 h-4 flex-shrink-0 ${row.ours.color}`} />
+                <span className={row.ours.color}>{row.ours.text}</span>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>
 
         {/* FAQ SECTION */}
         <section id='faqs' className="py-20 lg:py-28" data-aos="fade-up" data-aos-delay="800">

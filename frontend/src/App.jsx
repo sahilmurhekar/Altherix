@@ -69,6 +69,7 @@ function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<PatientSettingsPage />} />
             <Route path="medical-records" element={<PatientMedicalRecordsPage />} />
+            <Route path='manage' element={<ManageSchedule/>}/>
           </Route>
 
           {/* Doctor Dashboard Routes */}
