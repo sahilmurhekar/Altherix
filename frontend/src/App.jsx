@@ -18,10 +18,11 @@ import DashboardPatient from './pages/DashboardPatient';
 import DashboardPatientHome from './pages/patient/DashboardPatientHome';
 import FindDoctorsPage from './pages/patient/FindDoctorsPage';
 import AppointmentsPage from './pages/patient/AppointmentsPage';
-import MedicalRecordsPage from './pages/patient/MedicalRecordsPage';
+import MedicalRecordsPage from './pages/patient/PatientMedicalRecordsPage';
 import PrescriptionsPage from './pages/patient/PrescriptionsPage';
 import ProfilePage from './pages/patient/ProfilePage';
 import PatientSettingsPage from './pages/patient/SettingsPage';
+import PatientMedicalRecordsPage from './pages/patient/PatientMedicalRecordsPage';
 
 // Doctor Dashboard Pages
 import DashboardDoctor from './pages/DashboardDoctor';
@@ -64,10 +65,10 @@ function App() {
             <Route index element={<DashboardPatientHome />} />
             <Route path="find-doctors" element={<FindDoctorsPage />} />
             <Route path="appointments" element={<AppointmentsPage />} />
-            <Route path="medical-records" element={<MedicalRecordsPage />} />
             <Route path="prescriptions" element={<PrescriptionsPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<PatientSettingsPage />} />
+            <Route path="medical-records" element={<PatientMedicalRecordsPage />} />
           </Route>
 
           {/* Doctor Dashboard Routes */}

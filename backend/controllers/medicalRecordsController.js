@@ -88,7 +88,7 @@ export const searchPatients = async (req, res) => {
   }
 };
 
-// ========== UPLOAD MEDICAL RECORD ==========
+// ========== UPLOAD MEDICAL RECORD (FIXED) ==========
 export const uploadMedicalRecord = async (req, res) => {
   try {
     // Configure Cloudinary
@@ -174,7 +174,7 @@ export const uploadMedicalRecord = async (req, res) => {
           resource_type: 'auto',
           use_filename: true,
           unique_filename: true,
-          access_type: 'token' // Restrict access to authenticated users
+          access_type: 'token'
         },
         (error, result) => {
           if (error) reject(error);
@@ -185,10 +185,52 @@ export const uploadMedicalRecord = async (req, res) => {
       uploadStream.end(req.file.buffer);
     });
 
-    // ========== CREATE DATABASE RECORD ==========
+    // ========== SEND TO BLOCKCHAIN ==========
+    let blockchainTxData = null;
+    let blockchainStatus = 'pending';
+    let blockchainHash = null;
 
-    // Generate dummy blockchain hash for now
-    const dummyBlockchainHash = '0x' + Math.random().toString(16).slice(2, 10);
+    try {
+      await blockchainService.initialize();
+
+      // Get doctor's blockchain address for transaction
+      const doctorBalance = await blockchainService.getDoctorBalance();
+      const doctorEthAddress = doctorBalance.address;
+
+      // Send to blockchain
+      const txResult = await blockchainService.storeMedicalRecord(
+        doctorEthAddress, // Use doctor's Ethereum address
+        {
+          type: type,
+          description: description || '',
+          originalFileName: req.file.originalname,
+          fileUrl: uploadResult.secure_url,
+          cloudinaryPublicId: uploadResult.public_id
+        }
+      );
+
+      blockchainHash = txResult.transactionHash;
+      blockchainStatus = 'confirmed';
+
+      // Create blockchain transaction record
+      blockchainTxData = {
+        transactionHash: txResult.transactionHash,
+        blockNumber: txResult.blockNumber,
+        gasUsed: txResult.gasUsed,
+        status: 'success',
+        confirmedAt: new Date()
+      };
+
+      console.log(`✅ Medical record stored on blockchain: ${blockchainHash}`);
+
+    } catch (blockchainErr) {
+      console.error('⚠️ Blockchain storage failed:', blockchainErr.message);
+      // Don't fail the upload, just mark as pending/failed
+      blockchainStatus = 'failed';
+      blockchainHash = null;
+    }
+
+    // ========== CREATE DATABASE RECORD ==========
 
     const medicalRecord = new MedicalRecord({
       patientId: patientId,
@@ -200,12 +242,38 @@ export const uploadMedicalRecord = async (req, res) => {
       cloudinaryPublicId: uploadResult.public_id,
       description: description || '',
       fileSize: req.file.size,
-      blockchainHash: dummyBlockchainHash,
-      blockchainStatus: 'pending',
+      blockchainHash: blockchainHash,
+      blockchainStatus: blockchainStatus,
+      blockchainTx: blockchainTxData,
       verified: false
     });
 
     await medicalRecord.save();
+
+    // ========== CREATE BLOCKCHAIN TRANSACTION LOG (if successful) ==========
+    if (blockchainHash) {
+      try {
+        const BlockchainTransaction = (await import('../models/BlockchainTransaction.js')).default;
+
+        const bcTx = new BlockchainTransaction({
+          transactionHash: blockchainHash,
+          recordId: medicalRecord._id,
+          patientId: patientId,
+          doctorId: doctorId,
+          documentType: type,
+          blockNumber: blockchainTxData.blockNumber,
+          gasUsed: blockchainTxData.gasUsed,
+          transactionFee: blockchainTxData.transactionFee || '0',
+          status: 'success',
+          confirmedAt: blockchainTxData.confirmedAt,
+          network: 'sepolia'
+        });
+
+        await bcTx.save();
+      } catch (logErr) {
+        console.error('Failed to log blockchain transaction:', logErr.message);
+      }
+    }
 
     // ========== RESPONSE ==========
 
@@ -219,8 +287,19 @@ export const uploadMedicalRecord = async (req, res) => {
         description: medicalRecord.description,
         fileUrl: medicalRecord.fileUrl,
         blockchainHash: medicalRecord.blockchainHash,
+        blockchainStatus: medicalRecord.blockchainStatus,
         createdAt: medicalRecord.createdAt,
-        verified: medicalRecord.verified
+        verified: medicalRecord.verified,
+        blockchain: blockchainTxData ? {
+          status: 'confirmed',
+          transactionHash: blockchainHash,
+          blockNumber: blockchainTxData.blockNumber,
+          gasUsed: blockchainTxData.gasUsed,
+          explorerLink: `https://sepolia.etherscan.io/tx/${blockchainHash}`
+        } : {
+          status: 'failed',
+          message: 'File saved but blockchain storage failed. Try again later.'
+        }
       }
     });
 
@@ -229,7 +308,6 @@ export const uploadMedicalRecord = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 // ========== GET MEDICAL RECORDS FOR A PATIENT ==========
 export const getPatientMedicalRecords = async (req, res) => {
   try {

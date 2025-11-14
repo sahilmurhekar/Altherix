@@ -26,7 +26,7 @@ export const checkRecordBlockchainStatus = async (req, res) => {
       });
     }
 
-    // If we have a hash, get transaction details
+    // If we have a hash, get transaction details (REAL DATA NOW)
     if (record.blockchainHash) {
       try {
         await blockchainService.initialize();
@@ -46,14 +46,14 @@ export const checkRecordBlockchainStatus = async (req, res) => {
         console.error('Error fetching transaction:', txErr);
         return res.json({
           status: 'failed',
-          message: 'Could not verify blockchain status',
+          message: 'Transaction failed or not confirmed yet',
+          error: txErr.message,
           blockchainHash: record.blockchainHash,
           recordId: record._id
         });
       }
     }
 
-    // If status is failed
     if (record.blockchainStatus === 'failed') {
       return res.json({
         status: 'failed',
@@ -67,7 +67,6 @@ export const checkRecordBlockchainStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 // ========== GET DOCTOR'S BLOCKCHAIN ACCOUNT INFO ==========
 export const getDoctorBlockchainInfo = async (req, res) => {
   try {

@@ -1,4 +1,5 @@
-// /backend/models/MedicalRecord.js
+
+// ============ models/MedicalRecord.js (UPDATED) ============
 
 import mongoose from 'mongoose';
 
@@ -18,11 +19,10 @@ const medicalRecordSchema = new mongoose.Schema({
     index: true
   },
 
-  // Appointment reference (for validation that doctor has seen this patient)
   appointmentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Appointment',
-    required: false // Optional, but helpful for tracking
+    required: false
   },
 
   // Document type
@@ -41,36 +41,60 @@ const medicalRecordSchema = new mongoose.Schema({
 
   fileUrl: {
     type: String,
-    required: true // Cloudinary secure URL
+    required: true
   },
 
   cloudinaryPublicId: {
     type: String,
-    required: true // For deletion purposes
+    required: true
   },
 
-  // Metadata
   description: {
     type: String,
     default: ''
   },
 
   fileSize: {
-    type: Number, // In bytes
+    type: Number,
     required: true
   },
 
-  // Blockchain related (dummy for now)
+  // ========== BLOCKCHAIN FIELDS (ENHANCED) ==========
   blockchainHash: {
     type: String,
-    default: null, // Will be populated when actually stored on blockchain
-    sparse: true
+    default: null,
+    sparse: true,
+    index: true
   },
 
   blockchainStatus: {
     type: String,
     enum: ['pending', 'confirmed', 'failed'],
-    default: 'pending'
+    default: 'pending',
+    index: true
+  },
+
+  // Real blockchain transaction details
+  blockchainTx: {
+    transactionHash: String,
+    blockNumber: Number,
+    gasUsed: String,
+    gasPrice: String,        // in Gwei
+    transactionFee: String,  // in ETH
+    confirmations: Number,
+    confirmedAt: Date,
+    status: {
+      type: String,
+      enum: ['pending', 'success', 'failed'],
+      default: 'pending'
+    },
+    explorerLink: String     // Etherscan link
+  },
+
+  metadataHash: {
+    type: String,
+    default: null,
+    sparse: true
   },
 
   // Verification status
@@ -78,6 +102,11 @@ const medicalRecordSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
     index: true
+  },
+
+  doctorNotes: {
+    type: String,
+    default: null
   },
 
   // Audit trail
@@ -90,25 +119,21 @@ const medicalRecordSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  },
-
-  // For future use - doctor can add notes when viewing/verifying
-  doctorNotes: {
-    type: String,
-    default: null
   }
 });
 
-// Compound index for quick lookups
+// Compound indexes for efficient queries
 medicalRecordSchema.index({ patientId: 1, doctorId: 1 });
 medicalRecordSchema.index({ doctorId: 1, createdAt: -1 });
 medicalRecordSchema.index({ patientId: 1, createdAt: -1 });
+medicalRecordSchema.index({ patientId: 1, blockchainStatus: 1 });
 medicalRecordSchema.index({ type: 1, verified: 1 });
+medicalRecordSchema.index({ 'blockchainTx.transactionHash': 1 });
 
-// Middleware to update updatedAt on save
 medicalRecordSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
 
 export default mongoose.model('MedicalRecord', medicalRecordSchema);
+
