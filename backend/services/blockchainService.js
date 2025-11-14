@@ -83,7 +83,11 @@ class BlockchainService {
 
       // Estimate gas
       const gasEstimate = await this.provider.estimateGas(txData);
-      const gasPrice = await this.provider.getGasPrice();
+      const feeData = await this.provider.getFeeData();
+      const gasPrice = feeData.gasPrice;
+      if (!gasPrice) {
+        throw new Error('Could not retrieve gas price from provider');
+      }
 
       console.log(`⛽ Gas estimate: ${gasEstimate.toString()}`);
       console.log(`💰 Gas price: ${ethers.formatUnits(gasPrice, 'gwei')} Gwei`);
