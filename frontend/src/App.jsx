@@ -31,7 +31,6 @@ import DoctorAppointmentsPage from './pages/doctor/AppointmentsPage';
 import DoctorPatientsPage from './pages/doctor/PatientsPage';
 import DoctorMedicalRecordsPage from './pages/doctor/MedicalRecordsPage';
 import DoctorPrescriptionsPage from './pages/doctor/PrescriptionsPage';
-import DoctorAnalyticsPage from './pages/doctor/AnalyticsPage';
 import DoctorProfilePage from './pages/doctor/ProfilePage';
 import DoctorSettingsPage from './pages/doctor/SettingsPage';
 
@@ -86,7 +85,7 @@ function App() {
             <Route path="patients" element={<DoctorPatientsPage />} />
             <Route path="records" element={<DoctorMedicalRecordsPage />} />
             <Route path="prescriptions" element={<DoctorPrescriptionsPage />} />
-            <Route path="analytics" element={<DoctorAnalyticsPage />} />
+            <Route path="manage" element={<ManageSchedule />} />
             <Route path="profile" element={<DoctorProfilePage />} />
             <Route path="settings" element={<DoctorSettingsPage />} />
             <Route path='manage' element={<ManageSchedule/>}/>

@@ -14,8 +14,10 @@ import {
   Settings,
   BarChart3,
   Stethoscope,
-  User
+  User,
+  ClockCheck
 } from 'lucide-react';
+import Logo from '../assets/logo.png';
 
 const SidebarDoctor = () => {
   const navigate = useNavigate();
@@ -28,7 +30,7 @@ const SidebarDoctor = () => {
     { label: 'Patients', icon: Users, path: '/dashboard-doctor/patients' },
     { label: 'Medical Records', icon: FileText, path: '/dashboard-doctor/records' },
     { label: 'Prescriptions', icon: Pill, path: '/dashboard-doctor/prescriptions' },
-    { label: 'Analytics', icon: BarChart3, path: '/dashboard-doctor/analytics' },
+    { label: 'Manage Schedule', icon: ClockCheck, path: '/dashboard-doctor/manage' },
     { label: 'Profile', icon: User, path: '/dashboard-doctor/profile' },
     { label: 'Settings', icon: Settings, path: '/dashboard-doctor/settings' }
   ];
@@ -57,8 +59,8 @@ const SidebarDoctor = () => {
         {/* Logo */}
         <div className="p-6 border-b border-zinc-700">
           <div className="flex items-center gap-2 mb-2">
-            <Stethoscope className="w-6 h-6 text-purple-400" />
-            <h1 className="text-xl font-bold text-white">MedHub</h1>
+            <img src={Logo} className="w-6 h-6 rounded-md" />
+            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Altherix</h1>
           </div>
           <p className="text-xs text-zinc-400">Doctor Portal</p>
         </div>

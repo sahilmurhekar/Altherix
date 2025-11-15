@@ -15,9 +15,52 @@ import {
   Clock,
   Loader
 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
 const API_URL = `${SERVER_URL}/api`;
+
+// Map click handler component
+function MapClickHandler({ setFormData }) {
+  useMapEvents({
+    click(e) {
+      const { lat, lng } = e.latlng;
+      setFormData((prevData) => ({
+        ...prevData,
+        clinicLatitude: lat.toFixed(6),
+        clinicLongitude: lng.toFixed(6)
+      }));
+    },
+  });
+  return null;
+}
+
+// Change map view component
+function ChangeMapView({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center[0] !== 0 && center[1] !== 0) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+}
 
 const DoctorProfilePage = () => {
   const token = localStorage.getItem('token');
@@ -32,10 +75,7 @@ const DoctorProfilePage = () => {
     clinicAddress: '',
     city: '',
     bio: '',
-    // --- ADDED LOCATION FIELDS ---
     address: '',
-    latitude: '',
-    longitude: '',
     clinicLatitude: '',
     clinicLongitude: ''
   });
@@ -45,42 +85,51 @@ const DoctorProfilePage = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  // Fetch profile on mount
   useEffect(() => {
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
+    setProfileLoading(true);
     try {
       const res = await fetch(`${API_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const data = await res.json();
+
       if (data.user) {
+        const user = data.user;
+
         setFormData({
-          name: data.user.name || '',
-          email: data.user.email || '',
-          phone: data.user.phone || '',
-          specialization: data.user.specialization || '',
-          licenseNumber: data.user.licenseNumber || '',
-          experience: data.user.experience || '', // <-- FIX 3: Removed String()
-          qualifications: data.user.qualifications || '',
-          city: data.user.city || '',
-          bio: data.user.bio || '',
-          // --- FIX 2: READ FROM NESTED OBJECTS ---
-          address: data.user.location?.address || '',
-          latitude: data.user.location?.coordinates?.[1] || '',
-          longitude: data.user.location?.coordinates?.[0] || '',
-          clinicAddress: data.user.clinicLocation?.address || data.user.clinicAddress || '',
-          clinicLatitude: data.user.clinicLocation?.coordinates?.[1] || '',
-          clinicLongitude: data.user.clinicLocation?.coordinates?.[0] || ''
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          specialization: user.specialization || '',
+          licenseNumber: user.licenseNumber || '',
+          experience: user.experience || '',
+          qualifications: user.qualifications || '',
+          clinicAddress: user.clinicLocation?.address || user.clinicAddress || '',
+          city: user.city || '',
+          bio: user.bio || '',
+          address: user.location?.address || '',
+          clinicLatitude: user.clinicLocation?.coordinates?.[1] || '',
+          clinicLongitude: user.clinicLocation?.coordinates?.[0] || ''
         });
-        setProfilePicture(data.user.profilePicture);
+
+        setProfilePicture(user.profilePicture);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
-      setMessage({ type: 'error', text: 'Failed to load profile' });
+      setMessage({ type: 'error', text: `Failed to load profile: ${err.message}` });
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -139,15 +188,36 @@ const DoctorProfilePage = () => {
       const data = await res.json();
       if (res.ok) {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setTimeout(() => fetchProfile(), 1000);
       } else {
         setMessage({ type: 'error', text: data.message || 'Update failed' });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to update profile' });
+      console.error('Error updating profile:', err);
+      setMessage({ type: 'error', text: `Failed to update profile: ${err.message}` });
     } finally {
       setLoading(false);
     }
   };
+
+  // Map position logic - similar to patient profile
+  const defaultPosition = [12.9165, 79.1325]; // Vellore, India
+  const mapPosition = [
+    formData.clinicLatitude ? parseFloat(formData.clinicLatitude) : defaultPosition[0],
+    formData.clinicLongitude ? parseFloat(formData.clinicLongitude) : defaultPosition[1]
+  ];
+  const markerPosition = [
+    formData.clinicLatitude ? parseFloat(formData.clinicLatitude) : null,
+    formData.clinicLongitude ? parseFloat(formData.clinicLongitude) : null
+  ];
+
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader className="w-8 h-8 animate-spin text-cyan-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -257,25 +327,9 @@ const DoctorProfilePage = () => {
               </div>
             </div>
 
-            {/* City */}
-            <div>
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">City</label>
-              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
-                <MapPin className="w-5 h-5 text-zinc-400" />
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  className="w-full bg-transparent outline-none text-white"
-                />
-              </div>
-            </div>
-
-            {/* --- ADDED FIELDS --- */}
             {/* Personal Address */}
             <div>
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">Personal Address</label>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">City</label>
               <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
                 <MapPin className="w-5 h-5 text-zinc-400" />
                 <input
@@ -287,39 +341,6 @@ const DoctorProfilePage = () => {
                 />
               </div>
             </div>
-
-            {/* Personal Latitude */}
-            <div>
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">Personal Latitude</label>
-              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
-                <MapPin className="w-5 h-5 text-zinc-400" />
-                <input
-                  type="number"
-                  name="latitude"
-                  value={formData.latitude}
-                  onChange={handleChange}
-                  placeholder="e.g., 12.9716"
-                  className="w-full bg-transparent outline-none text-white"
-                />
-              </div>
-            </div>
-
-            {/* Personal Longitude */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">Personal Longitude</label>
-              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
-                <MapPin className="w-5 h-5 text-zinc-400" />
-                <input
-                  type="number"
-                  name="longitude"
-                  value={formData.longitude}
-                  onChange={handleChange}
-                  placeholder="e.g., 77.5946"
-                  className="w-full bg-transparent outline-none text-white"
-                />
-              </div>
-            </div>
-            {/* --- END ADDED FIELDS --- */}
           </div>
         </div>
 
@@ -363,10 +384,11 @@ const DoctorProfilePage = () => {
               <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
                 <Clock className="w-5 h-5 text-zinc-400" />
                 <input
-                  type="number"
+                  type="text"
                   name="experience"
                   value={formData.experience}
                   onChange={handleChange}
+                  placeholder="e.g., 10 years"
                   className="w-full bg-transparent outline-none text-white"
                 />
               </div>
@@ -382,60 +404,12 @@ const DoctorProfilePage = () => {
                   name="qualifications"
                   value={formData.qualifications}
                   onChange={handleChange}
+                  placeholder="e.g., MBBS, MD"
                   className="w-full bg-transparent outline-none text-white"
                 />
               </div>
             </div>
           </div>
-
-          {/* Clinic Address */}
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Address</label>
-            <div className="flex items-start gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
-              <MapPin className="w-5 h-5 text-zinc-400 mt-0.5" />
-              <textarea
-                name="clinicAddress"
-                value={formData.clinicAddress}
-                onChange={handleChange}
-                className="w-full bg-transparent outline-none text-white resize-none h-20 placeholder-zinc-500"
-              />
-            </div>
-          </div>
-
-          {/* --- ADDED FIELDS --- */}
-          {/* Clinic Lat/Lng */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Latitude</label>
-              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
-                <MapPin className="w-5 h-5 text-zinc-400" />
-                <input
-                  type="number"
-                  name="clinicLatitude"
-                  value={formData.clinicLatitude}
-                  onChange={handleChange}
-                  placeholder="e.g., 12.9716"
-                  className="w-full bg-transparent outline-none text-white"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Longitude</label>
-              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
-                <MapPin className="w-5 h-5 text-zinc-400" />
-                <input
-                  type="number"
-                  name="clinicLongitude"
-                  value={formData.clinicLongitude}
-                  onChange={handleChange}
-                  placeholder="e.g., 77.5946"
-                  className="w-full bg-transparent outline-none text-white"
-                />
-              </div>
-            </div>
-          </div>
-          {/* --- END ADDED FIELDS --- */}
-
 
           {/* Bio */}
           <div className="mt-6">
@@ -447,6 +421,90 @@ const DoctorProfilePage = () => {
               placeholder="Tell patients about yourself..."
               className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-500/50 outline-none transition-colors resize-none h-24"
             />
+          </div>
+        </div>
+
+        {/* Clinic Information */}
+        <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Clinic Information</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Clinic Address */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Address</label>
+              <div className="flex items-start gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400 mt-0.5" />
+                <textarea
+                  name="clinicAddress"
+                  value={formData.clinicAddress}
+                  onChange={handleChange}
+                  placeholder="Enter your clinic address"
+                  className="w-full bg-transparent outline-none text-white resize-none h-20 placeholder-zinc-500"
+                />
+              </div>
+            </div>
+
+            {/* Clinic Latitude */}
+            <div>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Latitude</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="number"
+                  step="0.000001"
+                  name="clinicLatitude"
+                  value={formData.clinicLatitude}
+                  onChange={handleChange}
+                  placeholder="e.g., 12.9165"
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+
+            {/* Clinic Longitude */}
+            <div>
+              <label className="block text-sm font-semibold text-zinc-300 mb-2">Clinic Longitude</label>
+              <div className="flex items-center gap-3 bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 focus-within:border-cyan-500/50 transition-colors">
+                <MapPin className="w-5 h-5 text-zinc-400" />
+                <input
+                  type="number"
+                  step="0.000001"
+                  name="clinicLongitude"
+                  value={formData.clinicLongitude}
+                  onChange={handleChange}
+                  placeholder="e.g., 79.1325"
+                  className="w-full bg-transparent outline-none text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Map Section */}
+          <div className="mt-6">
+            <label className="block text-sm font-semibold text-zinc-300 mb-2">Pin Clinic Location on Map</label>
+            <div className="h-72 w-full rounded-lg overflow-hidden border border-zinc-700 z-0">
+              <MapContainer
+                center={mapPosition}
+                zoom={formData.clinicLatitude ? 13 : 10}
+                scrollWheelZoom={true}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                {/* Only show marker if we have valid coordinates */}
+                {markerPosition[0] && markerPosition[1] && (
+                  <Marker position={markerPosition}></Marker>
+                )}
+
+                {/* Add our helper components */}
+                <MapClickHandler setFormData={setFormData} />
+                <ChangeMapView center={mapPosition} />
+              </MapContainer>
+            </div>
+            <p className="text-sm text-zinc-400 mt-2">Click on the map to set your clinic's precise location.</p>
           </div>
         </div>
 

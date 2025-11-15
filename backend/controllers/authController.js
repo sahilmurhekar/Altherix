@@ -121,34 +121,53 @@ export const verify = async (req, res) => {
   }
 };
 
+// ✅ CORRECTED getProfile
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select('-password');
+    // Use .lean() for better query performance
+    const user = await User.findById(req.userId)
+      .select('-password')
+      .lean();
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    console.log('📦 Profile data being returned:', {
+      experience: user.experience,
+      qualifications: user.qualifications
+    });
+
     res.json({ user });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-// UPDATE the existing updateProfile function to handle password updates
+// ✅ CORRECTED updateProfile
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.userId;
     const updates = req.body;
-
     const updateData = {};
 
     const allowedUpdates = [
       'name', 'phone', 'dateOfBirth', 'bloodType', 'allergies',
-      'specialization', 'licenseNumber', 'experience', 'qualifications',
-      'city', 'bio', 'consultationFee'
+      'specialization', 'licenseNumber', 'experience',  // ✅ Added
+      'qualifications',                                   // ✅ Added
+      'city', 'bio', 'consultationFee',
+      'clinicAddress'
     ];
 
+    // Process each allowed update
     allowedUpdates.forEach(key => {
-      if (updates[key] !== undefined) {
-        updateData[key] = updates[key];
+      if (updates[key] !== undefined && updates[key] !== null) {
+        // For string fields, trim whitespace
+        if (key === 'experience' || key === 'qualifications' ||
+            key === 'bio' || key === 'clinicAddress') {
+          updateData[key] = String(updates[key]).trim();
+        } else {
+          updateData[key] = updates[key];
+        }
       }
     });
 
@@ -156,6 +175,7 @@ export const updateProfile = async (req, res) => {
     if (updates.latitude !== undefined && updates.longitude !== undefined) {
       updateData['location.coordinates'] = [updates.longitude, updates.latitude];
     }
+
     if (updates.address !== undefined) {
       updateData['location.address'] = updates.address;
     }
@@ -164,31 +184,22 @@ export const updateProfile = async (req, res) => {
     if (updates.clinicLatitude !== undefined && updates.clinicLongitude !== undefined) {
       updateData['clinicLocation.coordinates'] = [updates.clinicLongitude, updates.clinicLatitude];
     }
-    if (updates.clinicAddress !== undefined) {
-      updateData['clinicLocation.address'] = updates.clinicAddress;
-      updateData['clinicAddress'] = updates.clinicAddress;
-    }
 
-    // ===== NEW: Handle password updates =====
+    // Handle password updates
     if (updates.password && updates.currentPassword) {
-      // Get user to verify current password
       const user = await User.findById(userId);
-
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // Verify current password
       const isMatch = await user.comparePassword(updates.currentPassword);
       if (!isMatch) {
         return res.status(400).json({ message: 'Current password is incorrect' });
       }
 
-      // Hash new password before setting
       const bcrypt = await import('bcryptjs');
       updateData.password = await bcrypt.default.hash(updates.password, 10);
     }
-    // ========================================
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -208,7 +219,43 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+export const updatePatientLocation = async (req, res) => {
+  try {
+    const userId = req.userId; // From verifyToken middleware
+    const { latitude, longitude, address } = req.body;
 
+    // Basic validation
+    if (!latitude || !longitude) {
+      return res.status(400).json({ message: 'Latitude and longitude are required' });
+    }
+
+    // Find the user and update their location
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          'location.type': 'Point',
+          'location.coordinates': [longitude, latitude],
+          'location.address': address || 'Updated Location' // Use address if provided
+        }
+      },
+      { new: true, runValidators: true }
+    ).select('location'); // Only select the location field for the response
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    res.json({
+      message: 'Patient location updated successfully',
+      location: updatedUser.location
+    });
+
+  } catch (err) {
+    console.error('Update location error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
 // ADD THIS NEW FUNCTION - Delete Account
 export const deleteAccount = async (req, res) => {
   try {
