@@ -1,4 +1,4 @@
-// ============ backend/api/index.js ============
+// ============ backend/api/index.js (UPDATED) ============
 
 import express from 'express';
 import mongoose from 'mongoose';
@@ -6,7 +6,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 // --- IMPORTANT: Path Change ---
-// We are now one folder deeper (in 'api'), so we go 'up' one level.
 import authRoutes from '../routes/auth.js';
 import appointmentRoutes from '../routes/appointment.js';
 import medicalRecordsRoutes from '../routes/medicalRecords.js';
@@ -24,7 +23,21 @@ console.log('✅ Environment variables loaded.');
 
 const app = express();
 
-app.use(cors());
+// --- CORS Configuration ---
+// List of allowed domains
+const allowedOrigins = [
+  "https://altherix.vercel.app",
+  "http://localhost:5000"
+];
+
+const corsOptions = {
+  origin: allowedOrigins
+};
+
+// Use the specific CORS options
+app.use(cors(corsOptions));
+
+// --- Middleware ---
 app.use(express.json());
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -33,9 +46,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- DB Connection ---
 const connectDB = async () => {
   try {
-    // Mongoose connections are cached, so this is efficient
     await mongoose.connect(process.env.MONGO_ATLAS_URI, {
       dbName: 'ALTHERIX_DB',
     });
@@ -45,13 +58,9 @@ const connectDB = async () => {
   }
 };
 
-// --- DB Connection ---
-// We run this at the top level. Vercel will re-use the connection
-// for "warm" function invocations.
 connectDB();
 
 // --- Routes ---
-// These paths are the same, as Vercel rewrites the full path to the app.
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/medical-records', medicalRecordsRoutes);
@@ -67,7 +76,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// --- CRITICAL CHANGE ---
-// DO NOT use app.listen(). Instead, export the 'app' for Vercel.
-// Vercel will handle the incoming request and pass it to 'app'.
+// --- Export for Vercel ---
 export default app;
