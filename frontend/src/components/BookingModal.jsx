@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, FileText, Video, MapPin, Loader, AlertCircle, CheckCircle, Star } from 'lucide-react';
 
-const SERVER_URL = 'http://localhost:5000';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
 
 const BookingModal = ({ doctor, onClose, onConfirm }) => {
   const [step, setStep] = useState(1);

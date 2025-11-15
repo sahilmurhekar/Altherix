@@ -9,6 +9,8 @@ import ColorBends from '../components/ColorBends';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+
 // Fix for default marker icon
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -108,7 +110,7 @@ const RegisterDoctor = () => {
   const getAddressFromCoords = async (lat, lng) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/auth/address-from-coords?latitude=${lat}&longitude=${lng}`
+        `${SERVER_URL}/api/auth/address-from-coords?latitude=${lat}&longitude=${lng}`
       );
       const data = await response.json();
       setAutoDetectedLocation(prev => ({ ...prev, address: data.address }));
@@ -124,7 +126,7 @@ const RegisterDoctor = () => {
   const getClinicAddressFromCoords = async (lat, lng) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/auth/address-from-coords?latitude=${lat}&longitude=${lng}`
+        `${SERVER_URL}/api/auth/address-from-coords?latitude=${lat}&longitude=${lng}`
       );
       const data = await response.json();
     } catch (err) {

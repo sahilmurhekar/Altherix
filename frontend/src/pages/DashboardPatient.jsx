@@ -4,6 +4,7 @@ import React, { useEffect, useContext } from 'react'; // <-- MODIFIED
 import { Outlet } from 'react-router-dom';
 import SidebarPatient from '../components/SidebarPatient';
 import { AuthContext } from '../context/AuthContext'; // <-- ADDED
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000'; // <-- ADDED
 
 const DashboardPatient = () => {
   const { token } = useContext(AuthContext); // <-- ADDED
@@ -17,7 +18,7 @@ const DashboardPatient = () => {
     const getAddressFromCoords = async (lat, lng) => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/auth/address-from-coords?latitude=${lat}&longitude=${lng}`
+          `${SERVER_URL}/api/auth/address-from-coords?latitude=${lat}&longitude=${lng}`
         );
         if (!res.ok) return 'Unknown Location';
         const data = await res.json();
@@ -35,7 +36,7 @@ const DashboardPatient = () => {
 
       try {
         // Now, send all data to our new PATCH endpoint
-        const res = await fetch('http://localhost:5000/api/auth/update-location', {
+        const res = await fetch(`${SERVER_URL}/api/auth/update-location`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

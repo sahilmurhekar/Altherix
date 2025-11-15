@@ -18,7 +18,8 @@ const PatientSettingsPage = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
-  const API_URL = 'http://localhost:5000/api';
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+  const API_URL = `${SERVER_URL}/api`;
 
   // Fetch current user profile
   useEffect(() => {

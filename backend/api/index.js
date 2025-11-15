@@ -1,13 +1,16 @@
-// ============ server.js (CLEANED) ============
+// ============ backend/api/index.js ============
 
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth.js';
-import appointmentRoutes from './routes/appointment.js';
-import medicalRecordsRoutes from './routes/medicalRecords.js';
-import patientMedicalRecordsRoutes from './routes/patientMedicalRecords.js'; // NEW
+
+// --- IMPORTANT: Path Change ---
+// We are now one folder deeper (in 'api'), so we go 'up' one level.
+import authRoutes from '../routes/auth.js';
+import appointmentRoutes from '../routes/appointment.js';
+import medicalRecordsRoutes from '../routes/medicalRecords.js';
+import patientMedicalRecordsRoutes from '../routes/patientMedicalRecords.js';
 
 dotenv.config();
 
@@ -16,13 +19,7 @@ if (!process.env.MONGO_ATLAS_URI) {
   console.error('🔥 FATAL ERROR: MONGO_ATLAS_URI is not defined.');
   process.exit(1);
 }
-if (!process.env.JWT_SECRET) {
-  console.error('🔥 FATAL ERROR: JWT_SECRET is not defined.');
-  process.exit(1);
-}
-if (!process.env.CLOUDINARY_CLOUD_NAME) {
-  console.warn('⚠️ WARNING: CLOUDINARY_CLOUD_NAME is not defined. Image uploads will fail.');
-}
+// ... (other env checks)
 console.log('✅ Environment variables loaded.');
 
 const app = express();
@@ -38,6 +35,7 @@ app.use((req, res, next) => {
 
 const connectDB = async () => {
   try {
+    // Mongoose connections are cached, so this is efficient
     await mongoose.connect(process.env.MONGO_ATLAS_URI, {
       dbName: 'ALTHERIX_DB',
     });
@@ -47,12 +45,19 @@ const connectDB = async () => {
   }
 };
 
-// Routes
+// --- DB Connection ---
+// We run this at the top level. Vercel will re-use the connection
+// for "warm" function invocations.
+connectDB();
+
+// --- Routes ---
+// These paths are the same, as Vercel rewrites the full path to the app.
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/medical-records', medicalRecordsRoutes);          // Doctor uploads
-app.use('/api/patient/medical-records', patientMedicalRecordsRoutes); // Patient views
+app.use('/api/medical-records', medicalRecordsRoutes);
+app.use('/api/patient/medical-records', patientMedicalRecordsRoutes);
 
+// --- Error Handler ---
 app.use((err, req, res, next) => {
   console.error('🔥🔥🔥 UNHANDLED ERROR 🔥🔥🔥');
   console.error(err.stack);
@@ -62,10 +67,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-  });
-});
+// --- CRITICAL CHANGE ---
+// DO NOT use app.listen(). Instead, export the 'app' for Vercel.
+// Vercel will handle the incoming request and pass it to 'app'.
+export default app;

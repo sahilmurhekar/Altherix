@@ -9,7 +9,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = 'http://localhost:5000/api/auth';
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+  const API_URL = `${SERVER_URL}/api/auth`;
 
   // Verify token on app load
   useEffect(() => {
