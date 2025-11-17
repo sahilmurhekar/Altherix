@@ -12,12 +12,13 @@ export const searchPatients = async (req, res) => {
     const doctorId = req.userId; // From JWT
     const { patientName, patientId } = req.query;
 
-    // Validate input
-    if (!patientName && !patientId) {
+    // REMOVE THIS BLOCK causing the issue:
+    /* if (!patientName && !patientId) {
       return res.status(400).json({
         message: 'Either patientName or patientId is required'
       });
     }
+    */
 
     // Build filter for appointments where this doctor is involved
     const appointmentFilter = {
@@ -42,12 +43,12 @@ export const searchPatients = async (req, res) => {
       _id: { $in: appointments }
     };
 
-    // Add name search if provided
+    // Add name search ONLY if provided
     if (patientName) {
       patientFilter.name = { $regex: patientName, $options: 'i' }; // Case-insensitive
     }
 
-    // Add ID search if provided
+    // Add ID search ONLY if provided
     if (patientId) {
       patientFilter._id = patientId;
     }
@@ -60,19 +61,19 @@ export const searchPatients = async (req, res) => {
     // For each patient, get their appointment count and last appointment date
     const enrichedPatients = await Promise.all(
       patients.map(async (patient) => {
-        const appointments = await Appointment.find({
+        // Get all appointments for this patient (not just the last one)
+        const patientAppointments = await Appointment.find({
           patientId: patient._id,
           doctorId: doctorId
         })
           .sort({ appointmentDate: -1 })
-          .limit(1)
-          .select('appointmentDate status');
+          .lean();
 
         return {
           ...patient,
-          appointmentCount: appointments.length,
-          lastAppointmentDate: appointments[0]?.appointmentDate || null,
-          lastAppointmentStatus: appointments[0]?.status || null
+          appointmentCount: patientAppointments.length,
+          lastAppointmentDate: patientAppointments[0]?.appointmentDate || null,
+          lastAppointmentStatus: patientAppointments[0]?.status || null
         };
       })
     );
@@ -81,12 +82,12 @@ export const searchPatients = async (req, res) => {
       patients: enrichedPatients,
       totalCount: enrichedPatients.length
     });
-
   } catch (err) {
     console.error('Search patients error:', err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // ========== UPLOAD MEDICAL RECORD (FIXED) ==========
 export const uploadMedicalRecord = async (req, res) => {

@@ -8,7 +8,7 @@ import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointment.js';
 import medicalRecordsRoutes from './routes/medicalRecords.js';
 import patientMedicalRecordsRoutes from './routes/patientMedicalRecords.js'; // NEW
-
+import patientRoutes from './routes/patient.js';
 dotenv.config();
 
 console.log('--- Loading Environment Variables ---');
@@ -51,14 +51,19 @@ const connectDB = async () => {
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/medical-records', medicalRecordsRoutes);          // Doctor uploads
+app.use('/api/patient', patientRoutes); // ADD THIS (after medical-records route)
 app.use('/api/patient/medical-records', patientMedicalRecordsRoutes); // Patient views
 
 app.use((err, req, res, next) => {
   console.error('🔥🔥🔥 UNHANDLED ERROR 🔥🔥🔥');
   console.error(err.stack);
-  res.status(500).send({
-    message: 'An internal server error occurred!',
-    error: err.message
+
+  // Don't expose sensitive error details in production
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+
+  res.status(err.status || 500).json({
+    message: isDevelopment ? err.message : 'An internal server error occurred!',
+    error: isDevelopment ? err : undefined
   });
 });
 

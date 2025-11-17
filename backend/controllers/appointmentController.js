@@ -145,6 +145,42 @@ export const getAvailableDatesForMonth = async (req, res) => {
   }
 };
 
+export const getPatientAppointmentHistory = async (req, res) => {
+  try {
+    const { patientId } = req.query;
+    const doctorId = req.userId;
+
+    if (!patientId || patientId.length !== 24) {
+      return res.status(400).json({ message: 'Invalid patientId' });
+    }
+
+    // Verify doctor-patient relationship
+    const hasAppointment = await Appointment.findOne({
+      doctorId: doctorId,
+      patientId: patientId
+    });
+
+    if (!hasAppointment) {
+      return res.status(403).json({ message: 'Unauthorized access' });
+    }
+
+    // Get all appointments (past, present, future)
+    const appointments = await Appointment.find({
+      patientId: patientId,
+      doctorId: doctorId
+    })
+      .sort({ appointmentDate: -1, appointmentTime: -1 })
+      .select('appointmentDate appointmentTime status reasonForVisit consultationMode notes');
+
+    res.json({
+      totalAppointments: appointments.length,
+      appointments: appointments
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // ========== BOOK APPOINTMENT ==========
 export const bookAppointment = async (req, res) => {
   try {

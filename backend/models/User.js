@@ -79,6 +79,9 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ 'location': '2dsphere' });
 userSchema.index({ 'clinicLocation': '2dsphere' });
 
+userSchema.index({ userType: 1 }); // ADD THIS for faster doctor queries
+userSchema.index({ email: 1, userType: 1 }); // ADD THIS for faster lookups
+
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);

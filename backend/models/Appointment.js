@@ -45,7 +45,7 @@ const appointmentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  
+
   consultationFee: {
     type: Number,
     required: true
@@ -88,7 +88,11 @@ appointmentSchema.index({ doctorId: 1, appointmentDate: 1, appointmentTime: 1 },
 
 // Index for patient appointments
 appointmentSchema.index({ patientId: 1, appointmentDate: 1 });
+// Compound index for doctor scheduling
+appointmentSchema.index({ doctorId: 1, appointmentDate: -1, status: 1 });
 
+// Index for patient filtering
+appointmentSchema.index({ patientId: 1, status: 1, appointmentDate: -1 });
 // Index for doctor schedule
 appointmentSchema.index({ doctorId: 1, status: 1 });
 

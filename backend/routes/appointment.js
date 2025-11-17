@@ -11,7 +11,8 @@ import {
   submitRating,
   cancelAppointment,
   markAppointmentComplete,
-  confirmAppointment
+  confirmAppointment,
+getPatientAppointmentHistory
 } from '../controllers/appointmentController.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -49,6 +50,8 @@ router.post('/availability/update', verifyToken, updateDoctorAvailability);
 
 // Get doctor's own availability (requires authentication)
 router.get('/availability/me', verifyToken, getDoctorAvailability);
+
+router.get('/history/:patientId', verifyToken, getPatientAppointmentHistory);
 
 // Get doctor's appointments (requires authentication)
 router.get('/doctor-appointments', verifyToken, getDoctorAppointments);
