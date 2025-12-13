@@ -262,7 +262,7 @@ const Landing = () => {
             <div id='doctors' className='py-20 lg:py-28' data-aos="fade-right">
               <div className="mb-10" data-aos="fade-up">
                 <h3 className="text-3xl text-center lg:text-left md:text-4xl font-black mb-6" data-aos="fade-up">
-                  <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">For</span> Doctors.
+                 For  <span className="bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent"> Doctors </span> 
                 </h3>
                 <p className="text-sm md:text-lg text-center lg:text-left text-zinc-400 hover:text-zinc-200 transition-all duration-300" data-aos="fade-up" data-aos-delay="100">Deliver exceptional care with a secure, efficient ecosystem for your practice.</p>
               </div>
